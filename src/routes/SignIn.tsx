@@ -13,7 +13,10 @@ export function SignIn() {
     setError('')
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: window.location.origin },
+      // Origin alone would drop the subpath the app is served from and land
+      // the user on the host's root. BASE_URL carries it, and is "/" anywhere
+      // the app owns the domain.
+      options: { emailRedirectTo: new URL(import.meta.env.BASE_URL, window.location.origin).href },
     })
     if (error) {
       setError(error.message)
