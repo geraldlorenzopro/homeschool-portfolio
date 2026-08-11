@@ -1,0 +1,307 @@
+@import 'tailwindcss';
+@import './styles/classical.css';
+
+/* The Classical tokens, re-exposed to Tailwind so utilities can reach them
+   (text-accent, bg-surface, border-divider, font-heading …). classical.css
+   stays the source of truth — these only mirror it. */
+@theme {
+  --color-bg: #f3f2f2;
+  --color-surface: #eae9e9;
+  --color-ink: #201f1d;
+  --color-accent: #b68235;
+
+  --color-neutral-100: #f8f4f4;
+  --color-neutral-200: #eae7e7;
+  --color-neutral-300: #d7d3d3;
+  --color-neutral-400: #bab6b6;
+  --color-neutral-500: #9b9797;
+  --color-neutral-600: #7d7979;
+  --color-neutral-700: #605d5d;
+  --color-neutral-800: #444141;
+  --color-neutral-900: #2d2b2b;
+
+  --color-accent-100: #fff3e4;
+  --color-accent-200: #ffe3bf;
+  --color-accent-300: #facb8d;
+  --color-accent-400: #e1ad66;
+  --color-accent-500: #c28d41;
+  --color-accent-600: #a06f24;
+  --color-accent-700: #7d5411;
+  --color-accent-800: #5a3b0a;
+  --color-accent-900: #3a270d;
+
+  --font-heading: 'Cormorant Garamond', system-ui, sans-serif;
+  --font-body: 'Lora', system-ui, sans-serif;
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 7px;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+a { color: var(--color-accent-700); text-decoration: none; }
+a:hover { color: var(--color-accent); }
+::placeholder { color: color-mix(in srgb, var(--color-text) 35%, transparent); }
+doc-page:not(:defined) { visibility: hidden; }
+
+/* ── app shell ──────────────────────────────────────────────────────────── */
+
+.app-nav {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--color-bg);
+  gap: 18px;
+}
+.app-brand {
+  margin-right: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.app-brand-tag {
+  font-family: var(--font-body);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+/* Nav / segmented tabs — outlined, accent only as border + text. */
+.tab {
+  font-size: 13px;
+  padding: 7px 14px;
+  border: 1px solid var(--color-divider);
+  color: var(--color-text);
+  background: transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.tab[aria-pressed='true'],
+.tab[aria-current='page'] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+.kicker {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+/* ── flow A: section panel ──────────────────────────────────────────────── */
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: 268px minmax(0, 1fr);
+  align-items: start;
+}
+.panel-aside {
+  border-right: 1px solid var(--color-divider);
+  padding: 28px 20px;
+  min-height: calc(100vh - 62px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.panel-main {
+  padding: 36px 40px 80px;
+  max-width: 900px;
+}
+.panel-title {
+  font-size: 34px;
+  font-weight: 400;
+  margin: 0 0 4px;
+}
+.panel-hint {
+  margin: 0 0 26px;
+  font-size: 14px;
+  opacity: 0.7;
+  max-width: 60ch;
+}
+
+.section-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 14px;
+  background: transparent;
+  color: var(--color-text);
+}
+.section-link[aria-current='true'] {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  color: var(--color-accent-800);
+}
+.section-count {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-neutral-500);
+}
+.section-count[data-filled='true'] { color: var(--color-accent); }
+
+/* The sidebar list and its narrow-screen replacement — one is always hidden. */
+.section-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.section-select { display: none; }
+
+.meter-track {
+  height: 4px;
+  background: var(--color-neutral-200);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.meter-fill { height: 100%; background: var(--color-accent); }
+
+/* ── editors ────────────────────────────────────────────────────────────── */
+
+.editor { display: flex; flex-direction: column; gap: 26px; }
+.add-card {
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: grid;
+  gap: 12px 16px;
+  align-items: end;
+}
+.span-all { grid-column: 1 / -1; }
+.justify-start { justify-self: start; }
+
+.figure-grid { display: grid; gap: 20px; }
+.figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.empty-state {
+  font-size: 13px;
+  opacity: 0.6;
+  padding: 4px 0;
+}
+
+.file-hint { font-size: 12px; opacity: 0.6; margin-top: 6px; display: block; }
+input[type='file'].input { padding: 6px; font-size: 12px; }
+
+.row-sub { font-size: 12px; opacity: 0.6; margin-top: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.nowrap { white-space: nowrap; }
+
+/* ── flow B: quick log ──────────────────────────────────────────────────── */
+
+.quick-wrap { max-width: 820px; margin: 0 auto; padding: 36px 24px 90px; }
+.quick-card {
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  background: color-mix(in srgb, var(--color-neutral-100) 60%, transparent);
+}
+.quick-fields {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 170px;
+  gap: 12px;
+  align-items: end;
+}
+.feed-row {
+  display: grid;
+  grid-template-columns: 92px 1fr auto;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-divider);
+  align-items: start;
+}
+
+/* ── flow C: the document ───────────────────────────────────────────────── */
+
+.doc-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--color-divider);
+  flex-wrap: wrap;
+}
+.doc-toolbar-options {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  opacity: 0.8;
+  flex-wrap: wrap;
+}
+/* The one place native checkboxes appear — keep them on the single accent. */
+.doc-toolbar-options input[type='checkbox'] { accent-color: var(--color-accent); }
+.doc h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+  font-size: 16pt;
+}
+.doc h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+  font-size: 13pt;
+  margin: 0;
+}
+.doc-rule-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid #b68235;
+  padding-bottom: 4pt;
+}
+.doc-th {
+  text-align: left;
+  padding: 5pt 0;
+  border-bottom: 1px solid #b68235;
+  font-size: 9pt;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #605d5d;
+}
+.doc-td {
+  padding: 6pt 8pt 6pt 0;
+  border-bottom: 1px solid #e5e2e2;
+  vertical-align: top;
+}
+.doc-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.break-page { break-before: page; }
+.keep { break-inside: avoid; }
+
+/* ── responsive: below 900px the sidebar becomes a select ───────────────── */
+
+@media (max-width: 900px) {
+  .panel-grid { grid-template-columns: minmax(0, 1fr); }
+  .panel-aside {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-divider);
+    min-height: 0;
+    padding: 18px 20px;
+  }
+  .panel-main { padding: 26px 20px 70px; }
+  .section-list { display: none; }
+  .section-select { display: block; }
+  .add-card { grid-template-columns: minmax(0, 1fr) !important; }
+  .quick-fields { grid-template-columns: minmax(0, 1fr); }
+  .app-nav { flex-wrap: wrap; }
+}
+
+/* ── print: only the document survives ──────────────────────────────────── */
+
+@media print {
+  .no-print { display: none !important; }
+}

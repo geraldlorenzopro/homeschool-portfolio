@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="_ds/classical-d3693db7-4f3e-4400-b642-0cd306a8d9bc/styles.css">
+<script src="_ds/classical-d3693db7-4f3e-4400-b642-0cd306a8d9bc/_ds_bundle.js"></script>
+<script src="./doc-page.js"></script>
+<style>
+  body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); }
+  a { color: var(--color-accent-700); text-decoration: none; }
+  a:hover { color: var(--color-accent); }
+  doc-page:not(:defined) { visibility: hidden; }
+  ::placeholder { color: color-mix(in srgb, var(--color-text) 35%, transparent); }
+</style>
+</helmet>
+
+<div style="min-height: 100vh; background: var(--color-bg);">
+
+  <div class="nav" style="position: sticky; top: 0; z-index: 5; background: var(--color-bg); gap: 18px;">
+    <div class="nav-brand" style="margin-right: auto; display: flex; align-items: baseline; gap: 10px;">
+      Homeschool Portfolio
+      <span style="font-family: var(--font-body); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-accent);">Florida · Annual Record</span>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn" style="{{ navA }}" onClick="{{ goA }}">A · Section panel</button>
+      <button class="btn" style="{{ navB }}" onClick="{{ goB }}">B · Quick log</button>
+      <button class="btn" style="{{ navDoc }}" onClick="{{ goDoc }}">Finished portfolio</button>
+    </div>
+  </div>
+
+  <sc-if value="{{ isA }}" hint-placeholder-val="{{ true }}">
+    <div style="display: grid; grid-template-columns: 268px minmax(0, 1fr); gap: 0; align-items: start;">
+
+      <aside style="border-right: 1px solid var(--color-divider); padding: 28px 20px; min-height: calc(100vh - 62px); display: flex; flex-direction: column; gap: 18px;">
+        <div>
+          <div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-accent);">Flow A</div>
+          <p style="margin: 6px 0 0; font-size: 13px; line-height: 1.5; opacity: 0.75;">Open any section, any time. Nothing is required in order — the portfolio assembles itself from whatever is filled in.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <sc-for list="{{ sections }}" as="s" hint-placeholder-count="7">
+            <button onClick="{{ s.onClick }}" style="{{ s.style }}">
+              <span>{{ s.label }}</span>
+              <span style="{{ s.badge }}">{{ s.count }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <hr class="hr" style="margin: 0;">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; opacity: 0.7;">
+            <span>Year completeness</span><span>{{ percent }}</span>
+          </div>
+          <div style="height: 4px; background: var(--color-neutral-200); border-radius: 2px; overflow: hidden;">
+            <div style="{{ progressBar }}"></div>
+          </div>
+          <button class="btn btn-ghost" style="justify-content: flex-start; font-size: 12px;" onClick="{{ reset }}">Reset to sample data</button>
+        </div>
+      </aside>
+
+      <main style="padding: 36px 40px 80px; max-width: 900px;">
+        <h1 style="font-size: 34px; font-weight: 400; margin: 0 0 4px;">{{ panelTitle }}</h1>
+        <p style="margin: 0 0 26px; font-size: 14px; opacity: 0.7; max-width: 60ch;">{{ panelHint }}</p>
+
+        <sc-if value="{{ showInfo }}">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; max-width: 680px;">
+            <div class="field"><label>Student name</label><input class="input" value="{{ student.name }}" onChange="{{ f.name }}"></div>
+            <div class="field"><label>Date of birth</label><input class="input" type="date" value="{{ student.dob }}" onChange="{{ f.dob }}"></div>
+            <div class="field"><label>Grade level</label><input class="input" value="{{ student.grade }}" onChange="{{ f.grade }}"></div>
+            <div class="field"><label>School year</label><input class="input" value="{{ student.year }}" onChange="{{ f.year }}"></div>
+            <div class="field"><label>Parent / instructor</label><input class="input" value="{{ student.parent }}" onChange="{{ f.parent }}"></div>
+            <div class="field"><label>County of registration</label><input class="input" value="{{ student.county }}" onChange="{{ f.county }}"></div>
+            <div class="field"><label>Evaluator</label><input class="input" value="{{ student.evaluator }}" onChange="{{ f.evaluator }}"></div>
+            <div class="field"><label>Evaluation date</label><input class="input" type="date" value="{{ student.evalDate }}" onChange="{{ f.evalDate }}"></div>
+            <div class="field" style="grid-column: 1 / -1;"><label>Instructor's statement of the year</label><textarea class="input" onChange="{{ f.statement }}" value="{{ student.statement }}"></textarea></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showCurriculum }}">
+          <div style="display: flex; flex-direction: column; gap: 26px;">
+            <div style="border: 1px solid var(--color-divider); border-radius: var(--radius-md); padding: 20px; display: grid; grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr); gap: 12px 16px; align-items: end;">
+              <div class="field" style="grid-column: 1 / -1;"><label>Curriculum or program</label><input class="input" placeholder="Math-U-See Alpha" value="{{ c.title }}" onChange="{{ ch.title }}"></div>
+              <div class="field"><label>Publisher or author</label><input class="input" placeholder="Demme Learning" value="{{ c.publisher }}" onChange="{{ ch.publisher }}"></div>
+              <div class="field"><label>Subject</label><select class="input" value="{{ c.subject }}" onChange="{{ ch.subject }}">
+                <option value="ela">Language Arts</option>
+                <option value="math">Mathematics</option>
+                <option value="other">Multiple subjects</option>
+              </select></div>
+              <div class="field" style="grid-column: 1 / -1;"><label>How it was used</label><input class="input" placeholder="Core program, three lessons a week, September through March" value="{{ c.usage }}" onChange="{{ ch.usage }}"></div>
+              <button class="btn btn-primary" style="grid-column: 1 / -1; justify-self: start;" onClick="{{ addCurriculum }}">Add curriculum</button>
+            </div>
+            <table class="table">
+              <thead><tr><th>Curriculum</th><th style="width: 210px;">Publisher</th><th style="width: 150px;">Subject</th><th>How it was used</th><th style="width: 40px;"></th></tr></thead>
+              <tbody>
+                <sc-for list="{{ curriculum }}" as="c" hint-placeholder-count="5">
+                  <tr>
+                    <td>{{ c.title }}</td>
+                    <td style="opacity: 0.75;">{{ c.publisher }}</td>
+                    <td style="opacity: 0.75;">{{ c.subjectLabel }}</td>
+                    <td style="opacity: 0.6; font-size: 13px;">{{ c.usage }}</td>
+                    <td><button class="btn btn-ghost" style="font-size: 12px;" onClick="{{ c.onDelete }}">Remove</button></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showDocs }}">
+          <div style="display: flex; flex-direction: column; gap: 26px;">
+            <div style="border: 1px solid var(--color-divider); border-radius: var(--radius-md); padding: 20px; display: grid; grid-template-columns: minmax(200px, 1fr) minmax(160px, 220px); gap: 12px 16px; align-items: end;">
+              <div class="field" style="grid-column: 1 / -1;"><label>Document title</label><input class="input" placeholder="Individualized Education Program (IEP) 2025–2026" value="{{ fl.title }}" onChange="{{ flh.title }}"></div>
+              <div class="field"><label>Type</label><select class="input" value="{{ fl.kind }}" onChange="{{ flh.kind }}">
+                <option value="IEP">IEP</option>
+                <option value="504 Plan">504 Plan</option>
+                <option value="Therapy / service plan">Therapy / service plan</option>
+                <option value="Prior evaluation">Prior evaluation</option>
+                <option value="Medical letter">Medical letter</option>
+                <option value="Other">Other</option>
+              </select></div>
+              <div class="field"><label>Document date</label><input class="input" type="date" value="{{ fl.date }}" onChange="{{ flh.date }}"></div>
+              <div class="field" style="grid-column: 1 / -1;"><label>Why it is included</label><input class="input" placeholder="Goals and accommodations carried into the home program" value="{{ fl.note }}" onChange="{{ flh.note }}"></div>
+              <div class="field" style="grid-column: 1 / -1;"><label>File (PDF or image)</label>
+                <input class="input" type="file" accept="application/pdf,image/*" style="padding: 6px; font-size: 12px;" onChange="{{ pickFile }}">
+                <span style="font-size: 12px; opacity: 0.6; margin-top: 6px;">{{ filePicked }}</span>
+              </div>
+              <button class="btn btn-primary" style="grid-column: 1 / -1; justify-self: start;" onClick="{{ addFile }}">Attach document</button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px;">
+              <sc-for list="{{ files }}" as="f" hint-placeholder-count="2">
+                <figure style="margin: 0; display: flex; flex-direction: column; gap: 8px;">
+                  <div class="plate" style="{{ f.preview }}">{{ f.placeholder }}</div>
+                  <figcaption style="font-size: 13px; line-height: 1.45;">
+                    <div style="display: flex; align-items: center; gap: 8px;"><span class="tag tag-accent">{{ f.typeLabel }}</span><span>{{ f.title }}</span></div>
+                    <div style="font-size: 11px; opacity: 0.6; margin-top: 4px;">{{ f.meta }}</div>
+                    <div style="font-size: 12px; opacity: 0.7; margin-top: 4px;">{{ f.note }}</div>
+                  </figcaption>
+                  <div style="display: flex; gap: 8px;">
+                    <a class="btn btn-ghost" style="font-size: 12px;" href="{{ f.href }}" download="{{ f.download }}" target="_blank">Open</a>
+                    <button class="btn btn-ghost" style="font-size: 12px;" onClick="{{ f.onDelete }}">Remove</button>
+                  </div>
+                </figure>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showLesson }}">
+          <div style="display: flex; flex-direction: column; gap: 26px;">
+            <div style="border: 1px solid var(--color-divider); border-radius: var(--radius-md); padding: 20px;">
+              <div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-accent); margin-bottom: 14px;">Add an activity</div>
+              <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 90px; gap: 12px; align-items: end;">
+                <div class="field"><label>Date</label><input class="input" type="date" value="{{ d.date }}" onChange="{{ dh.date }}"></div>
+                <div class="field"><label>What was covered</label><input class="input" placeholder="e.g. Short vowel word families" value="{{ d.title }}" onChange="{{ dh.title }}"></div>
+                <div class="field"><label>Hours</label><input class="input" type="number" step="0.5" value="{{ d.hours }}" onChange="{{ dh.hours }}"></div>
+                <div class="field" style="grid-column: 1 / -1;"><label>Materials, method, outcome</label><textarea class="input" style="min-height: 64px;" placeholder="Explode the Code p. 22–26; read aloud; mastered -at and -op families." value="{{ d.notes }}" onChange="{{ dh.notes }}"></textarea></div>
+              </div>
+              <button class="btn btn-primary" style="margin-top: 14px;" onClick="{{ addLesson }}">Add to {{ subjectLabel }}</button>
+            </div>
+
+            <sc-if value="{{ hasLessons }}" hint-placeholder-val="{{ true }}">
+              <table class="table">
+                <thead><tr><th style="width: 120px;">Date</th><th>Activity</th><th style="width: 70px;">Hours</th><th style="width: 40px;"></th></tr></thead>
+                <tbody>
+                  <sc-for list="{{ lessons }}" as="e" hint-placeholder-count="3">
+                    <tr>
+                      <td style="white-space: nowrap; opacity: 0.7;">{{ e.dateFmt }}</td>
+                      <td><div>{{ e.title }}</div><div style="font-size: 12px; opacity: 0.6; margin-top: 2px;">{{ e.notes }}</div></td>
+                      <td style="font-variant-numeric: tabular-nums;">{{ e.hours }}</td>
+                      <td><button class="btn btn-ghost" style="font-size: 12px;" onClick="{{ e.onDelete }}">Remove</button></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showBooks }}">
+          <div style="display: flex; flex-direction: column; gap: 26px;">
+            <div style="border: 1px solid var(--color-divider); border-radius: var(--radius-md); padding: 20px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 150px auto; gap: 12px; align-items: end;">
+              <div class="field"><label>Title</label><input class="input" placeholder="Frog and Toad Together" value="{{ b.title }}" onChange="{{ bh.title }}"></div>
+              <div class="field"><label>Author</label><input class="input" placeholder="Arnold Lobel" value="{{ b.author }}" onChange="{{ bh.author }}"></div>
+              <div class="field"><label>Finished</label><input class="input" type="date" value="{{ b.date }}" onChange="{{ bh.date }}"></div>
+              <button class="btn btn-primary" onClick="{{ addBook }}">Add book</button>
+              <div class="field" style="grid-column: 1 / -1;"><label>How it was read</label><input class="input" placeholder="Read aloud together / read independently" value="{{ b.note }}" onChange="{{ bh.note }}"></div>
+            </div>
+            <table class="table">
+              <thead><tr><th>Title</th><th style="width: 190px;">Author</th><th style="width: 190px;">How it was read</th><th style="width: 120px;">Finished</th><th style="width: 40px;"></th></tr></thead>
+              <tbody>
+                <sc-for list="{{ books }}" as="k" hint-placeholder-count="4">
+                  <tr>
+                    <td style="font-style: italic;">{{ k.title }}</td>
+                    <td style="opacity: 0.75;">{{ k.author }}</td>
+                    <td style="opacity: 0.6; font-size: 13px;">{{ k.note }}</td>
+                    <td style="white-space: nowrap; opacity: 0.7;">{{ k.dateFmt }}</td>
+                    <td><button class="btn btn-ghost" style="font-size: 12px;" onClick="{{ k.onDelete }}">Remove</button></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showSamples }}">
+          <div style="display: flex; flex-direction: column; gap: 26px;">
+            <div style="border: 1px solid var(--color-divider); border-radius: var(--radius-md); padding: 20px; display: grid; grid-template-columns: minmax(0, 1fr) 170px 150px auto; gap: 12px; align-items: end;">
+              <div class="field"><label>What the work is</label><input class="input" placeholder="Handwriting page — capital letters" value="{{ s.title }}" onChange="{{ sh.title }}"></div>
+              <div class="field"><label>Subject</label><select class="input" value="{{ s.subject }}" onChange="{{ sh.subject }}">
+                <option value="ela">Language Arts</option>
+                <option value="math">Mathematics</option>
+              </select></div>
+              <div class="field"><label>Date</label><input class="input" type="date" value="{{ s.date }}" onChange="{{ sh.date }}"></div>
+              <button class="btn btn-primary" onClick="{{ addSample }}">Add sample</button>
+              <div class="field" style="grid-column: 1 / -1;"><label>Photo or scan</label><input class="input" type="file" accept="image/*" style="padding: 6px; font-size: 12px;" onChange="{{ pickSample }}"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px;">
+              <sc-for list="{{ samples }}" as="w" hint-placeholder-count="4">
+                <figure style="margin: 0; display: flex; flex-direction: column; gap: 8px;">
+                  <div class="plate" style="{{ w.thumb }}">{{ w.placeholder }}</div>
+                  <figcaption style="font-size: 13px; line-height: 1.4;">
+                    <div>{{ w.title }}</div>
+                    <div style="font-size: 11px; opacity: 0.6; margin-top: 2px;">{{ w.meta }}</div>
+                  </figcaption>
+                  <button class="btn btn-ghost" style="align-self: flex-start; font-size: 12px;" onClick="{{ w.onDelete }}">Remove</button>
+                </figure>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </main>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isB }}">
+    <div style="max-width: 820px; margin: 0 auto; padding: 36px 24px 90px;">
+      <div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-accent);">Flow B</div>
+      <h1 style="font-size: 34px; font-weight: 400; margin: 6px 0 4px;">One running log</h1>
+      <p style="margin: 0 0 26px; font-size: 14px; opacity: 0.7; max-width: 62ch;">Write down whatever happened today — a lesson, a book finished, a photo of the work. Each entry files itself into the right portfolio section, so nothing has to be organized twice.</p>
+
+      <div style="border: 1px solid var(--color-divider); border-radius: var(--radius-md); padding: 20px; background: color-mix(in srgb, var(--color-neutral-100) 60%, transparent);">
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <sc-for list="{{ kinds }}" as="t" hint-placeholder-count="3">
+            <button class="btn" style="{{ t.style }}" onClick="{{ t.onClick }}">{{ t.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 170px; gap: 12px; align-items: end;">
+          <div class="field"><label>Date</label><input class="input" type="date" value="{{ q.date }}" onChange="{{ qh.date }}"></div>
+          <div class="field"><label>{{ qTitleLabel }}</label><input class="input" placeholder="{{ qTitlePlaceholder }}" value="{{ q.title }}" onChange="{{ qh.title }}"></div>
+          <div class="field"><label>{{ qSideLabel }}</label>
+            <sc-if value="{{ qIsBook }}">
+              <input class="input" placeholder="Author" value="{{ q.author }}" onChange="{{ qh.author }}">
+            </sc-if>
+            <sc-if value="{{ qIsNotBook }}" hint-placeholder-val="{{ true }}">
+              <select class="input" value="{{ q.subject }}" onChange="{{ qh.subject }}">
+                <option value="ela">Language Arts</option>
+                <option value="math">Mathematics</option>
+              </select>
+            </sc-if>
+          </div>
+          <div class="field" style="grid-column: 1 / -1;"><label>Notes</label><textarea class="input" style="min-height: 60px;" placeholder="A sentence is plenty — it becomes the portfolio description." value="{{ q.notes }}" onChange="{{ qh.notes }}"></textarea></div>
+          <sc-if value="{{ qIsLesson }}">
+            <div class="field"><label>Hours</label><input class="input" type="number" step="0.5" value="{{ q.hours }}" onChange="{{ qh.hours }}"></div>
+          </sc-if>
+          <sc-if value="{{ qIsSample }}">
+            <div class="field" style="grid-column: 1 / -1;"><label>Photo or scan</label><input class="input" type="file" accept="image/*" style="padding: 6px; font-size: 12px;" onChange="{{ pickQuick }}"></div>
+          </sc-if>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px; margin-top: 16px;">
+          <button class="btn btn-primary" onClick="{{ addQuick }}">Save to portfolio</button>
+          <span style="font-size: 12px; opacity: 0.6;">{{ qDestination }}</span>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: baseline; justify-content: space-between; margin: 34px 0 10px;">
+        <h2 style="font-size: 20px; font-weight: 400; margin: 0;">This year so far</h2>
+        <span style="font-size: 12px; opacity: 0.6;">{{ feedSummary }}</span>
+      </div>
+      <hr class="hr" style="margin: 0 0 6px;">
+      <div style="display: flex; flex-direction: column;">
+        <sc-for list="{{ feed }}" as="e" hint-placeholder-count="5">
+          <div style="display: grid; grid-template-columns: 92px 1fr auto; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--color-divider); align-items: start;">
+            <div style="font-size: 12px; opacity: 0.6; font-variant-numeric: tabular-nums; padding-top: 3px;">{{ e.dateFmt }}</div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="tag tag-accent">{{ e.kindLabel }}</span>
+                <span>{{ e.title }}</span>
+              </div>
+              <div style="font-size: 13px; opacity: 0.65; margin-top: 4px; line-height: 1.5;">{{ e.meta }}</div>
+            </div>
+            <button class="btn btn-ghost" style="font-size: 12px;" onClick="{{ e.onDelete }}">Remove</button>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isDoc }}">
+    <div>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 28px; border-bottom: 1px solid var(--color-divider);">
+        <span style="font-size: 13px; opacity: 0.7;">Generated from everything entered in flow A or B — this is the file you hand to the evaluator.</span>
+        <button class="btn btn-primary" onClick="{{ print }}">Save as PDF</button>
+      </div>
+      <doc-page margin="0.8in" size="{{ paper }}">
+        <div slot="header" style="display: flex; justify-content: space-between; font-size: 9pt; letter-spacing: 0.04em; color: #605d5d; border-bottom: 1px solid #d7d3d3; padding-bottom: 6pt;">
+          <span>{{ student.name }} — Home Education Portfolio</span>
+          <span>{{ student.year }}</span>
+        </div>
+
+        <div style="text-align: center; padding: 34pt 0 26pt;">
+          <div style="font-size: 9pt; letter-spacing: 0.22em; text-transform: uppercase; color: #b68235;">State of Florida · Home Education Program</div>
+          <h1 style="font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 40pt; line-height: 1.05; margin: 14pt 0 8pt;">Annual Evaluation Portfolio</h1>
+          <div style="font-size: 15pt; font-style: italic;">{{ student.name }}</div>
+          <div style="font-size: 10pt; color: #605d5d; margin-top: 6pt;">{{ student.grade }} · {{ student.year }} · {{ student.county }} County</div>
+          <div style="width: 90pt; height: 1px; background: #b68235; margin: 22pt auto 0;"></div>
+        </div>
+
+        <h2 style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 16pt; margin: 26pt 0 8pt;">Student &amp; program record</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10.5pt;">
+          <tbody>
+            <sc-for list="{{ docFacts }}" as="r" hint-placeholder-count="6">
+              <tr>
+                <td style="width: 34%; padding: 6pt 0; border-bottom: 1px solid #e5e2e2; color: #605d5d; font-size: 9.5pt; letter-spacing: 0.04em; text-transform: uppercase;">{{ r.k }}</td>
+                <td style="padding: 6pt 0; border-bottom: 1px solid #e5e2e2;">{{ r.v }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+
+        <h2 style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 16pt; margin: 26pt 0 6pt;">Instructor's statement</h2>
+        <p style="font-size: 10.5pt; line-height: 1.65; text-align: justify; margin: 0;">{{ student.statement }}</p>
+
+        <sc-if value="{{ hasCurriculum }}" hint-placeholder-val="{{ true }}">
+          <h2 style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 16pt; margin: 26pt 0 6pt;">Curriculum used</h2>
+          <p style="font-size: 9.5pt; color: #605d5d; margin: 0 0 12pt;">Programs, textbooks and packaged courses followed during the school year.</p>
+          <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
+            <thead>
+              <tr>
+                <th style="text-align: left; padding: 5pt 0; border-bottom: 1px solid #b68235; font-size: 9pt; letter-spacing: 0.06em; text-transform: uppercase; color: #605d5d;">Curriculum</th>
+                <th style="text-align: left; padding: 5pt 0; border-bottom: 1px solid #b68235; font-size: 9pt; letter-spacing: 0.06em; text-transform: uppercase; color: #605d5d;">Publisher</th>
+                <th style="text-align: left; padding: 5pt 0; border-bottom: 1px solid #b68235; font-size: 9pt; letter-spacing: 0.06em; text-transform: uppercase; color: #605d5d;">Subject</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ docCurriculum }}" as="c" hint-placeholder-count="5">
+                <tr style="break-inside: avoid;">
+                  <td style="padding: 6pt 8pt 6pt 0; border-bottom: 1px solid #e5e2e2; vertical-align: top;">
+                    <div>{{ c.title }}</div>
+                    <div style="color: #605d5d; font-size: 9pt;">{{ c.usage }}</div>
+                  </td>
+                  <td style="padding: 6pt 8pt 6pt 0; border-bottom: 1px solid #e5e2e2; color: #444141; vertical-align: top;">{{ c.publisher }}</td>
+                  <td style="padding: 6pt 0; border-bottom: 1px solid #e5e2e2; color: #605d5d; vertical-align: top; white-space: nowrap;">{{ c.subjectLabel }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </sc-if>
+
+        <h2 style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 16pt; margin: 30pt 0 6pt; break-before: page;">Log of educational activities</h2>
+        <p style="font-size: 9.5pt; color: #605d5d; margin: 0 0 14pt;">{{ docLogCaption }}</p>
+        <sc-for list="{{ docGroups }}" as="g" hint-placeholder-count="4">
+          <div style="margin-bottom: 20pt; break-inside: avoid;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; border-bottom: 1px solid #b68235; padding-bottom: 4pt;">
+              <h3 style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 13pt; margin: 0;">{{ g.label }}</h3>
+              <span style="font-size: 9pt; color: #605d5d; font-variant-numeric: tabular-nums;">{{ g.summary }}</span>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
+              <tbody>
+                <sc-for list="{{ g.rows }}" as="e" hint-placeholder-count="3">
+                  <tr style="break-inside: avoid;">
+                    <td style="width: 78pt; padding: 6pt 8pt 6pt 0; border-bottom: 1px solid #e5e2e2; color: #605d5d; vertical-align: top; font-variant-numeric: tabular-nums; white-space: nowrap;">{{ e.dateFmt }}</td>
+                    <td style="padding: 6pt 0; border-bottom: 1px solid #e5e2e2; vertical-align: top;">
+                      <span>{{ e.title }}</span>
+                      <span style="color: #605d5d;"> — {{ e.notes }}</span>
+                    </td>
+                    <td style="{{ e.hoursCell }}">{{ e.hours }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </sc-for>
+
+        <h2 style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 16pt; margin: 30pt 0 6pt; break-before: page;">Reading list</h2>
+        <p style="font-size: 9.5pt; color: #605d5d; margin: 0 0 12pt;">{{ docBooksCaption }}</p>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
+          <thead>
+            <tr>
+              <th style="text-align: left; padding: 5pt 0; border-bottom: 1px solid #b68235; font-size: 9pt; letter-spacing: 0.06em; text-transform: uppercase; color: #605d5d;">Title</th>
+              <th style="text-align: left; padding: 5pt 0; border-bottom: 1px solid #b68235; font-size: 9pt; letter-spacing: 0.06em; text-transform: uppercase; color: #605d5d;">Author</th>
+              <th style="text-align: left; padding: 5pt 0; border-bottom: 1px solid #b68235; font-size: 9pt; letter-spacing: 0.06em; text-transform: uppercase; color: #605d5d;">How it was read</th>
+              <th style="text-align: right; padding: 5pt 0; border-bottom: 1px solid #b68235; font-size: 9pt; letter-spacing: 0.06em; text-transform: uppercase; color: #605d5d;">Finished</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ docBooks }}" as="k" hint-placeholder-count="6">
+              <tr style="break-inside: avoid;">
+                <td style="padding: 6pt 8pt 6pt 0; border-bottom: 1px solid #e5e2e2; font-style: italic;">{{ k.title }}</td>
+                <td style="padding: 6pt 8pt 6pt 0; border-bottom: 1px solid #e5e2e2; color: #444141;">{{ k.author }}</td>
+                <td style="padding: 6pt 8pt 6pt 0; border-bottom: 1px solid #e5e2e2; color: #605d5d;">{{ k.note }}</td>
+                <td style="padding: 6pt 0; border-bottom: 1px solid #e5e2e2; text-align: right; color: #605d5d; white-space: nowrap; font-variant-numeric: tabular-nums;">{{ k.dateFmt }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+
+        <h2 style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 16pt; margin: 30pt 0 6pt; break-before: page;">Samples of work</h2>
+        <p style="font-size: 9.5pt; color: #605d5d; margin: 0 0 16pt;">Selected materials showing the student's progress across the year.</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20pt;">
+          <sc-for list="{{ docSamples }}" as="w" hint-placeholder-count="4">
+            <figure style="margin: 0; break-inside: avoid;">
+              <div class="plate" style="{{ w.plate }}">{{ w.placeholder }}</div>
+              <figcaption style="font-size: 9.5pt; line-height: 1.45; margin-top: 6pt;">
+                <div>{{ w.title }}</div>
+                <div style="color: #605d5d;">{{ w.meta }}</div>
+              </figcaption>
+            </figure>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ hasFiles }}" hint-placeholder-val="{{ true }}">
+          <h2 style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 16pt; margin: 30pt 0 6pt; break-before: page;">Support documents</h2>
+          <p style="font-size: 9.5pt; color: #605d5d; margin: 0 0 16pt;">The student's individualized education program and related plans, filed with this portfolio as evidence of the accommodations followed at home.</p>
+          <sc-for list="{{ docFiles }}" as="f" hint-placeholder-count="1">
+            <div style="break-inside: avoid; margin-bottom: 22pt;">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; border-bottom: 1px solid #b68235; padding-bottom: 4pt;">
+                <h3 style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 13pt; margin: 0;">{{ f.title }}</h3>
+                <span style="font-size: 9pt; color: #605d5d;">{{ f.meta }}</span>
+              </div>
+              <p style="font-size: 10pt; line-height: 1.6; color: #444141; margin: 8pt 0 10pt;">{{ f.note }}</p>
+              <div class="plate" style="{{ f.docPreview }}">{{ f.docPlaceholder }}</div>
+            </div>
+          </sc-for>
+        </sc-if>
+
+        <div style="margin-top: 34pt; border-top: 1px solid #b68235; padding-top: 14pt; break-inside: avoid;">
+          <h2 style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 16pt; margin: 0 0 6pt;">Evaluator's certification</h2>
+          <p style="font-size: 10pt; line-height: 1.6; color: #444141; margin: 0 0 26pt; text-align: justify;">The undersigned Florida-certified teacher has reviewed this portfolio and discussed the year's work with the student and parent, in accordance with s. 1002.41(1)(f), Florida Statutes.</p>
+          <div style="display: grid; grid-template-columns: 1fr 150pt; gap: 30pt;">
+            <div style="border-bottom: 1px solid #201f1d; padding-bottom: 3pt; font-size: 10pt;">{{ student.evaluator }}</div>
+            <div style="border-bottom: 1px solid #201f1d; padding-bottom: 3pt; font-size: 10pt;">{{ evalDateFmt }}</div>
+            <div style="font-size: 8.5pt; color: #605d5d; letter-spacing: 0.06em; text-transform: uppercase;">Evaluator signature</div>
+            <div style="font-size: 8.5pt; color: #605d5d; letter-spacing: 0.06em; text-transform: uppercase;">Date</div>
+          </div>
+        </div>
+
+        <div slot="footer" style="display: flex; justify-content: space-between; font-size: 8.5pt; color: #7d7979; border-top: 1px solid #d7d3d3; padding-top: 6pt;">
+          <span>Home education portfolio · retained two years per s. 1002.41(1)(b), F.S.</span>
+          <span>{{ student.parent }}</span>
+        </div>
+      </doc-page>
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;paperSize&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;letter&quot;,&quot;a4&quot;],&quot;default&quot;:&quot;letter&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Portfolio document&quot;},&quot;showHours&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Portfolio document&quot;},&quot;groupBySubject&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Portfolio document&quot;}}">
+class Component extends DCLogic {
+  KEY = 'hs-portfolio-fl-v3';
+  SUBS = [
+    { k: 'ela', label: 'Language Arts' },
+    { k: 'math', label: 'Mathematics' }
+  ];
+
+  state = {
+    view: 'a', section: 'info', subject: 'ela', qkind: 'lesson',
+    data: null, _v: 2,
+    d: { date: '', title: '', notes: '', hours: '' },
+    b: { title: '', author: '', date: '', note: 'Read aloud together' },
+    c: { title: '', publisher: '', subject: 'ela', usage: '' },
+    fl: { title: '', kind: 'IEP', date: '', note: '', fileName: '', mime: '', size: 0, data: '' },
+    s: { title: '', subject: 'ela', date: '', img: '' },
+    q: { date: '', title: '', notes: '', hours: '', subject: 'ela', author: '', img: '' }
+  };
+
+  seed() {
+    const L = (date, title, notes, hours) => ({ id: Math.random().toString(36).slice(2), date, title, notes, hours });
+    return {
+      student: {
+        name: 'Sofía Ramírez', dob: '2019-04-12', grade: 'First grade (K-2)',
+        year: '2025–2026', parent: 'Marta Ramírez', county: 'Miami-Dade',
+        evaluator: 'Karen Whitfield, FL cert. #718402', evalDate: '2026-06-05',
+        statement: 'Sofía completed her first-grade year at home with steady, visible growth. She began the year reading three-letter words with support and finished reading early chapter books aloud without help. Mathematics moved from counting objects to addition and subtraction within twenty, with measurement introduced in the spring. Both subjects are documented activity by activity in the log below.'
+      },
+      lessons: {
+        ela: [
+          L('2025-09-08', 'Short vowel word families', 'Explode the Code pp. 12–20; built -at, -op, -in words with letter tiles.', 1.5),
+          L('2025-11-14', 'Sentence writing and capitals', 'Wrote four sentences about the beach trip; edited for capitals and periods.', 1),
+          L('2026-02-03', 'Reading aloud, early chapter books', 'Read two chapters of Frog and Toad unassisted; retold the plot in her own words.', 1.25),
+          L('2026-04-21', 'Poetry recitation', 'Memorized and recited "The Swing" for the family.', 0.75)
+        ],
+        math: [
+          L('2025-09-16', 'Counting and place value to 100', 'Hundred chart, skip counting by 2s, 5s and 10s.', 1),
+          L('2025-12-02', 'Addition within 20', 'Number bonds with counters; timed practice sheet, 18/20 correct.', 1),
+          L('2026-03-10', 'Measurement with non-standard units', 'Measured the kitchen in shoe-lengths and recorded results in a table.', 1.5)
+        ]
+      },
+      files: [
+        { id: 'f1', title: 'Individualized Education Program (IEP) 2025–2026', kind: 'IEP', date: '2025-08-22', note: 'Annual IEP from Miami-Dade County Public Schools; goals in reading fluency and fine-motor writing carried into the home program.', fileName: 'IEP-2025-2026.pdf', mime: 'application/pdf', size: 0, data: '' }
+      ],
+      curriculum: [
+        { id: 'c1', title: 'Explode the Code, Books 1–2', publisher: 'Educators Publishing Service', subject: 'ela', usage: 'Core phonics — three lessons a week, September through March' },
+        { id: 'c2', title: 'All About Reading, Level 1', publisher: 'All About Learning Press', subject: 'ela', usage: 'Reading fluency and decoding practice, full year' },
+        { id: 'c3', title: 'Handwriting Without Tears — First Grade', publisher: 'Learning Without Tears', subject: 'ela', usage: 'Daily handwriting, ten minutes' },
+        { id: 'c4', title: 'Math-U-See Alpha', publisher: 'Demme Learning', subject: 'math', usage: 'Core mathematics with manipulatives, full year' },
+        { id: 'c5', title: 'Kitchen Table Math, Book 1', publisher: 'Chris Wright', subject: 'math', usage: 'Supplement for measurement and word problems, spring term' },
+        { id: 'c6', title: 'Ambleside Online Year 1 book list', publisher: 'Ambleside Online (free curriculum)', subject: 'other', usage: 'Read-aloud and narration spine for the reading list below' }
+      ],
+      books: [
+        { id: 'b1', title: 'Frog and Toad Together', author: 'Arnold Lobel', date: '2025-10-02', note: 'Read independently' },
+        { id: 'b2', title: 'The Story of Ferdinand', author: 'Munro Leaf', date: '2025-11-19', note: 'Read aloud together' },
+        { id: 'b3', title: 'Blueberries for Sal', author: 'Robert McCloskey', date: '2025-12-15', note: 'Read aloud together' },
+        { id: 'b4', title: 'Henry and Mudge: The First Book', author: 'Cynthia Rylant', date: '2026-01-28', note: 'Read independently' },
+        { id: 'b5', title: 'A Tree Is Nice', author: 'Janice May Udry', date: '2026-03-04', note: 'Read aloud together' },
+        { id: 'b6', title: 'Owl Moon', author: 'Jane Yolen', date: '2026-05-12', note: 'Read independently' }
+      ],
+      samples: [
+        { id: 's1', title: 'Handwriting page — capital letters', subject: 'ela', date: '2025-09-25', img: '' },
+        { id: 's2', title: 'Addition within 20, practice sheet', subject: 'math', date: '2025-12-02', img: '' },
+        { id: 's3', title: 'Narrated drawing — Owl Moon retelling', subject: 'ela', date: '2026-05-14', img: '' },
+        { id: 's4', title: 'Measurement table — kitchen in shoe-lengths', subject: 'math', date: '2026-03-10', img: '' }
+      ]
+    };
+  }
+
+  componentDidMount() {
+    let data = null;
+    try { const raw = localStorage.getItem(this.KEY); if (raw) data = JSON.parse(raw); } catch (e) {}
+    if (!data) data = this.seed();
+    const base = this.seed();
+    Object.keys(base).forEach(k => { if (data[k] === undefined) data[k] = base[k]; });
+    this.persist(data);
+    const today = new Date().toISOString().slice(0, 10);
+    this.setState(st => ({
+      data,
+      d: { ...st.d, date: today },
+      b: { ...st.b, date: today },
+      s: { ...st.s, date: today },
+      q: { ...st.q, date: today },
+      fl: { ...st.fl, date: today }
+    }));
+  }
+
+  persist(data) { try { localStorage.setItem(this.KEY, JSON.stringify(data)); } catch (e) {} }
+  save(fn) {
+    this.setState(st => {
+      const data = fn(JSON.parse(JSON.stringify(st.data)));
+      this.persist(data);
+      return { data };
+    });
+  }
+  uid() { return Math.random().toString(36).slice(2); }
+  fmt(iso) {
+    if (!iso) return '—';
+    const dt = new Date(iso + 'T00:00:00');
+    if (isNaN(dt)) return iso;
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  subLabel(k) { if (k === 'other') return 'Multiple subjects'; const s = this.SUBS.find(x => x.k === k); return s ? s.label : k; }
+
+  shrink(file, cb) {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 900, sc = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        cb(c.toDataURL('image/jpeg', 0.72));
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  }
+
+  field(group, key) { return e => { const v = e.target.value; this.setState(st => ({ [group]: { ...st[group], [key]: v } })); }; }
+  handlers(group, keys) { const o = {}; keys.forEach(k => { o[k] = this.field(group, k); }); return o; }
+
+  placeholderBox(label, h) {
+    return React.createElement('div', {
+      style: {
+        height: h, display: 'flex', alignItems: 'flex-end', padding: '10px',
+        background: 'repeating-linear-gradient(135deg, #eae7e7 0 8px, #e0dcdc 8px 16px)',
+        color: '#7d7979', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '10px',
+        letterSpacing: '0.04em', boxSizing: 'border-box'
+      }
+    }, label);
+  }
+
+  renderVals() {
+    const st = this.state;
+    const data = st.data || { student: {}, lessons: { ela: [], math: [] }, books: [], samples: [], curriculum: [] };
+    if (!data.curriculum) data.curriculum = [];
+    if (!data.files) data.files = [];
+    const student = data.student || {};
+    const showHours = this.props.showHours ?? true;
+    const grouped = this.props.groupBySubject ?? true;
+    const paper = this.props.paperSize ?? 'letter';
+
+    const tab = on => 'font-size:13px;padding:7px 14px;border:1px solid ' + (on ? 'var(--color-accent)' : 'var(--color-divider)') + ';color:' + (on ? 'var(--color-accent)' : 'var(--color-text)') + ';background:' + (on ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent') + ';border-radius:var(--radius-md);cursor:pointer;font-family:var(--font-body);';
+
+    const secDefs = [
+      { k: 'info', label: 'Student information', n: Object.values(student).filter(Boolean).length ? 'ok' : 0 },
+      { k: 'curriculum', label: 'Curriculum used', n: data.curriculum.length },
+      { k: 'docs', label: 'Support documents (IEP)', n: data.files.length },
+      ...this.SUBS.map(s => ({ k: s.k, label: s.label, n: (data.lessons[s.k] || []).length })),
+      { k: 'books', label: 'Reading list', n: data.books.length },
+      { k: 'samples', label: 'Work samples', n: data.samples.length }
+    ];
+    const sections = secDefs.map(s => ({
+      k: s.k, label: s.label, count: s.n === 'ok' ? '✓' : s.n,
+      onClick: () => this.setState({ section: s.k, subject: this.SUBS.some(x => x.k === s.k) ? s.k : st.subject }),
+      style: 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;padding:8px 10px;border:0;border-radius:var(--radius-md);cursor:pointer;font-family:var(--font-body);font-size:14px;background:' + (st.section === s.k ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'transparent') + ';color:' + (st.section === s.k ? 'var(--color-accent-800)' : 'var(--color-text)') + ';',
+      badge: 'font-size:11px;font-variant-numeric:tabular-nums;color:' + (s.n === 'ok' || s.n > 0 ? 'var(--color-accent)' : 'var(--color-neutral-500)') + ';'
+    }));
+
+    const filled = secDefs.filter(s => s.n === 'ok' || s.n > 0).length;
+    const pct = Math.round((filled / secDefs.length) * 100);
+
+    const isSubjectSection = this.SUBS.some(x => x.k === st.section);
+    const lessons = (data.lessons[st.subject] || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1)).map(e => ({
+      ...e, dateFmt: this.fmt(e.date),
+      onDelete: () => this.save(dd => { dd.lessons[st.subject] = dd.lessons[st.subject].filter(x => x.id !== e.id); return dd; })
+    }));
+
+    const books = data.books.slice().sort((a, b) => (a.date < b.date ? 1 : -1)).map(k => ({
+      ...k, dateFmt: this.fmt(k.date),
+      onDelete: () => this.save(dd => { dd.books = dd.books.filter(x => x.id !== k.id); return dd; })
+    }));
+
+    const samples = data.samples.slice().sort((a, b) => (a.date < b.date ? 1 : -1)).map(w => ({
+      ...w,
+      meta: this.subLabel(w.subject) + ' · ' + this.fmt(w.date),
+      thumb: w.img ? 'height:150px;background-image:url(' + w.img + ');background-size:cover;background-position:center;' : 'padding:0;',
+      placeholder: w.img ? '' : this.placeholderBox('drop photo or scan', '150px'),
+      onDelete: () => this.save(dd => { dd.samples = dd.samples.filter(x => x.id !== w.id); return dd; })
+    }));
+
+    const curriculum = data.curriculum.map(c => ({
+      ...c, subjectLabel: this.subLabel(c.subject),
+      onDelete: () => this.save(dd => { dd.curriculum = (dd.curriculum || []).filter(x => x.id !== c.id); return dd; })
+    }));
+
+    const files = data.files.map(f => {
+      const isImg = (f.mime || '').indexOf('image/') === 0;
+      const isPdf = (f.mime || '').indexOf('pdf') > -1;
+      return {
+        ...f,
+        meta: f.kind + '  ·  ' + this.fmt(f.date) + (f.fileName ? '  ·  ' + f.fileName : ''),
+        typeLabel: isPdf ? 'PDF' : isImg ? 'Image' : (f.mime || 'File'),
+        preview: isImg && f.data ? 'height:150px;background-image:url(' + f.data + ');background-size:cover;background-position:center;' : 'padding:0;',
+        placeholder: isImg && f.data ? '' : this.placeholderBox(isPdf ? 'PDF document attached' : 'document attached', '150px'),
+        docPreview: isImg && f.data ? 'height:190pt;background-image:url(' + f.data + ');background-size:contain;background-repeat:no-repeat;background-position:center;' : 'padding:0;',
+        docPlaceholder: isImg && f.data ? '' : this.placeholderBox(isPdf ? 'PDF attached — filed with this portfolio' : 'document filed with this portfolio', '190pt'),
+        href: f.data || '#',
+        download: f.fileName || 'document',
+        onDelete: () => this.save(dd => { dd.files = (dd.files || []).filter(x => x.id !== f.id); return dd; })
+      };
+    });
+
+    const panelCopy = {
+      info: ['Student information', 'The identifying record at the front of the portfolio: who the student is, who taught, and who evaluates.'],
+      curriculum: ['Curriculum used', 'The programs, textbooks and packaged courses you taught from this year. Listing them shows the evaluator the scope and sequence behind the daily log.'],
+      docs: ['Support documents', 'Upload the student\u2019s IEP, therapy or service plans, medical letters and prior evaluations. They are attached to the portfolio as supporting evidence for accommodations.'],
+      books: ['Reading list', 'Florida asks for a list of reading materials used. Add each title as you finish it.'],
+      samples: ['Work samples', 'Photographs or scans of worksheets, writing, drawings and projects. Two or three per subject is plenty.']
+    };
+    const panel = panelCopy[st.section] || [this.subLabel(st.section), 'Every activity you log here becomes a dated row in the portfolio\u2019s log of educational activities.'];
+
+    // Flow B
+    const kinds = [
+      { k: 'lesson', label: 'Lesson or activity' },
+      { k: 'book', label: 'Book finished' },
+      { k: 'sample', label: 'Work sample' }
+    ].map(t => ({ ...t, style: tab(st.qkind === t.k), onClick: () => this.setState({ qkind: t.k }) }));
+
+    const feedRaw = [];
+    this.SUBS.forEach(s => (data.lessons[s.k] || []).forEach(e => feedRaw.push({
+      id: e.id, kind: 'lesson', kindLabel: s.label, date: e.date, title: e.title,
+      meta: e.notes + (e.hours ? '  ·  ' + e.hours + ' h' : ''),
+      onDelete: () => this.save(dd => { dd.lessons[s.k] = dd.lessons[s.k].filter(x => x.id !== e.id); return dd; })
+    })));
+    data.books.forEach(k => feedRaw.push({
+      id: k.id, kind: 'book', kindLabel: 'Reading', date: k.date, title: k.title,
+      meta: k.author + '  ·  ' + k.note,
+      onDelete: () => this.save(dd => { dd.books = dd.books.filter(x => x.id !== k.id); return dd; })
+    }));
+    data.samples.forEach(w => feedRaw.push({
+      id: w.id, kind: 'sample', kindLabel: 'Work sample', date: w.date, title: w.title,
+      meta: this.subLabel(w.subject) + (w.img ? '  ·  photo attached' : '  ·  no photo yet'),
+      onDelete: () => this.save(dd => { dd.samples = dd.samples.filter(x => x.id !== w.id); return dd; })
+    }));
+    const feed = feedRaw.sort((a, b) => (a.date < b.date ? 1 : -1)).map(e => ({ ...e, dateFmt: this.fmt(e.date) }));
+
+    const totalHours = this.SUBS.reduce((t, s) => t + (data.lessons[s.k] || []).reduce((n, e) => n + (parseFloat(e.hours) || 0), 0), 0);
+
+    // Portfolio document
+    const hoursCell = 'width:42pt;padding:6pt 0;border-bottom:1px solid #e5e2e2;text-align:right;color:#605d5d;vertical-align:top;font-variant-numeric:tabular-nums;' + (showHours ? '' : 'display:none;');
+    let docGroups;
+    if (grouped) {
+      docGroups = this.SUBS.map(s => {
+        const rows = (data.lessons[s.k] || []).slice().sort((a, b) => (a.date > b.date ? 1 : -1));
+        const h = rows.reduce((n, e) => n + (parseFloat(e.hours) || 0), 0);
+        return {
+          label: s.label,
+          summary: rows.length + ' entries' + (showHours ? '  ·  ' + h + ' recorded hours' : ''),
+          rows: rows.map(e => ({ ...e, dateFmt: this.fmt(e.date), hoursCell }))
+        };
+      }).filter(g => g.rows.length);
+    } else {
+      const all = [];
+      this.SUBS.forEach(s => (data.lessons[s.k] || []).forEach(e => all.push({ ...e, title: s.label + ' — ' + e.title })));
+      all.sort((a, b) => (a.date > b.date ? 1 : -1));
+      docGroups = [{
+        label: 'Chronological log',
+        summary: all.length + ' entries' + (showHours ? '  ·  ' + totalHours + ' recorded hours' : ''),
+        rows: all.map(e => ({ ...e, dateFmt: this.fmt(e.date), hoursCell }))
+      }];
+    }
+
+    const docSamples = data.samples.slice().sort((a, b) => (a.date > b.date ? 1 : -1)).map(w => ({
+      title: w.title,
+      meta: this.subLabel(w.subject) + ' · ' + this.fmt(w.date),
+      plate: w.img ? 'height:150pt;background-image:url(' + w.img + ');background-size:cover;background-position:center;' : 'padding:0;',
+      placeholder: w.img ? '' : this.placeholderBox('photo or scan of the work', '150pt')
+    }));
+
+    const docFacts = [
+      { k: 'Student', v: student.name },
+      { k: 'Date of birth', v: this.fmt(student.dob) },
+      { k: 'Grade level', v: student.grade },
+      { k: 'School year', v: student.year },
+      { k: 'Parent / instructor', v: student.parent },
+      { k: 'County of registration', v: student.county },
+      { k: 'Evaluator', v: student.evaluator },
+      { k: 'Recorded instructional hours', v: totalHours + ' hours logged across Language Arts and Mathematics' }
+    ];
+
+    return {
+      isA: st.view === 'a', isB: st.view === 'b', isDoc: st.view === 'doc',
+      goA: () => this.setState({ view: 'a' }), goB: () => this.setState({ view: 'b' }), goDoc: () => this.setState({ view: 'doc' }),
+      navA: tab(st.view === 'a'), navB: tab(st.view === 'b'), navDoc: tab(st.view === 'doc'),
+      print: () => window.print(),
+      paper,
+
+      sections, percent: pct + '%',
+      progressBar: 'height:100%;width:' + pct + '%;background:var(--color-accent);',
+      reset: () => { const d = this.seed(); this.persist(d); this.setState({ data: d }); },
+
+      panelTitle: panel[0], panelHint: panel[1],
+      curriculum,
+      c: st.c, ch: this.handlers('c', ['title', 'publisher', 'subject', 'usage']),
+      addCurriculum: () => {
+        const c = this.state.c;
+        if (!c.title.trim()) return;
+        this.save(dd => { dd.curriculum = [...(dd.curriculum || []), { id: this.uid(), ...c }]; return dd; });
+        this.setState(s2 => ({ c: { title: '', publisher: '', subject: s2.c.subject, usage: '' } }));
+      },
+      docCurriculum: curriculum,
+      hasCurriculum: curriculum.length > 0,
+
+      files,
+      fl: st.fl, flh: this.handlers('fl', ['title', 'kind', 'date', 'note']),
+      pickFile: e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const fr = new FileReader();
+        fr.onload = () => this.setState(s2 => ({ fl: { ...s2.fl, fileName: file.name, mime: file.type, size: file.size, data: fr.result } }));
+        fr.readAsDataURL(file);
+      },
+      addFile: () => {
+        const fl = this.state.fl;
+        if (!fl.title.trim() && !fl.fileName) return;
+        this.save(dd => { dd.files = [...(dd.files || []), { id: this.uid(), ...fl, title: fl.title.trim() || fl.fileName }]; return dd; });
+        this.setState(s2 => ({ fl: { title: '', kind: s2.fl.kind, date: s2.fl.date, note: '', fileName: '', mime: '', size: 0, data: '' } }));
+      },
+      filePicked: st.fl.fileName ? st.fl.fileName + '  ·  ' + Math.round((st.fl.size || 0) / 1024) + ' KB' : 'No file chosen yet',
+      docFiles: files,
+      hasFiles: files.length > 0,
+
+      showInfo: st.section === 'info', showLesson: isSubjectSection,
+      showCurriculum: st.section === 'curriculum', showDocs: st.section === 'docs',
+      showBooks: st.section === 'books', showSamples: st.section === 'samples',
+
+      student,
+      f: (() => {
+        const keys = ['name', 'dob', 'grade', 'year', 'parent', 'county', 'evaluator', 'evalDate', 'statement'];
+        const o = {};
+        keys.forEach(k => { o[k] = e => { const v = e.target.value; this.save(dd => { dd.student[k] = v; return dd; }); }; });
+        return o;
+      })(),
+
+      subjectLabel: this.subLabel(st.subject),
+      lessons, hasLessons: lessons.length > 0,
+      d: st.d, dh: this.handlers('d', ['date', 'title', 'notes', 'hours']),
+      addLesson: () => {
+        const d = this.state.d;
+        if (!d.title.trim()) return;
+        const sub = this.state.subject;
+        this.save(dd => { dd.lessons[sub] = [...(dd.lessons[sub] || []), { id: this.uid(), ...d }]; return dd; });
+        this.setState(s2 => ({ d: { date: s2.d.date, title: '', notes: '', hours: '' } }));
+      },
+
+      books,
+      b: st.b, bh: this.handlers('b', ['title', 'author', 'date', 'note']),
+      addBook: () => {
+        const b = this.state.b;
+        if (!b.title.trim()) return;
+        this.save(dd => { dd.books = [...dd.books, { id: this.uid(), ...b }]; return dd; });
+        this.setState(s2 => ({ b: { title: '', author: '', date: s2.b.date, note: s2.b.note } }));
+      },
+
+      samples,
+      s: st.s, sh: this.handlers('s', ['title', 'subject', 'date']),
+      pickSample: e => { const file = e.target.files && e.target.files[0]; if (file) this.shrink(file, img => this.setState(s2 => ({ s: { ...s2.s, img } }))); },
+      addSample: () => {
+        const s = this.state.s;
+        if (!s.title.trim()) return;
+        this.save(dd => { dd.samples = [...dd.samples, { id: this.uid(), ...s }]; return dd; });
+        this.setState(s2 => ({ s: { title: '', subject: s2.s.subject, date: s2.s.date, img: '' } }));
+      },
+
+      kinds,
+      q: st.q, qh: this.handlers('q', ['date', 'title', 'notes', 'hours', 'subject', 'author']),
+      qIsBook: st.qkind === 'book', qIsNotBook: st.qkind !== 'book',
+      qIsLesson: st.qkind === 'lesson', qIsSample: st.qkind === 'sample',
+      qTitleLabel: st.qkind === 'book' ? 'Book title' : st.qkind === 'sample' ? 'What the work is' : 'What was covered',
+      qTitlePlaceholder: st.qkind === 'book' ? 'Owl Moon' : st.qkind === 'sample' ? 'Handwriting page — capital letters' : 'Measured the kitchen in shoe-lengths',
+      qSideLabel: st.qkind === 'book' ? 'Author' : 'Subject',
+      qDestination: st.qkind === 'book' ? 'Files into: Reading list' : st.qkind === 'sample' ? 'Files into: Samples of work' : 'Files into: Log of educational activities',
+      pickQuick: e => { const file = e.target.files && e.target.files[0]; if (file) this.shrink(file, img => this.setState(s2 => ({ q: { ...s2.q, img } }))); },
+      addQuick: () => {
+        const q = this.state.q, kind = this.state.qkind;
+        if (!q.title.trim()) return;
+        this.save(dd => {
+          if (kind === 'book') dd.books = [...dd.books, { id: this.uid(), title: q.title, author: q.author, date: q.date, note: q.notes || 'Read aloud together' }];
+          else if (kind === 'sample') dd.samples = [...dd.samples, { id: this.uid(), title: q.title, subject: q.subject, date: q.date, img: q.img }];
+          else dd.lessons[q.subject] = [...(dd.lessons[q.subject] || []), { id: this.uid(), date: q.date, title: q.title, notes: q.notes, hours: q.hours }];
+          return dd;
+        });
+        this.setState(s2 => ({ q: { ...s2.q, title: '', notes: '', hours: '', author: '', img: '' } }));
+      },
+      feed,
+      feedSummary: feed.length + ' entries · ' + data.books.length + ' books · ' + totalHours + ' hours',
+
+      docFacts, docGroups, docSamples,
+      docBooks: books.map(k => ({ title: k.title, author: k.author, note: k.note, dateFmt: k.dateFmt })).reverse(),
+      docBooksCaption: data.books.length + ' titles read or shared during the ' + (student.year || '') + ' school year.',
+      docLogCaption: grouped
+        ? 'Dated activities, materials and outcomes, grouped by subject.'
+        : 'Dated activities, materials and outcomes, in the order they happened.',
+      evalDateFmt: this.fmt(student.evalDate)
+    };
+  }
+}
+
+</script>
+</body>
+</html>
