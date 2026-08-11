@@ -1,5 +1,7 @@
 # Homeschool Portfolio — Florida annual record
 
+**Live: <https://geraldlorenzopro.github.io/homeschool-portfolio/>**
+
 A web app for a homeschooling parent to record a student's school year and generate a
 print-ready **annual evaluation portfolio** for Florida's home education statute
 (s. 1002.41, F.S.).
@@ -83,6 +85,28 @@ are private; files are only ever served through signed URLs that expire in an ho
 storage policies key on the `{user_id}/` path prefix. Images are downscaled to 900 px on
 the long edge (JPEG q 0.72) in the browser before upload; uploads are capped at 15 MB.
 
+## Deployment
+
+Pushing to `main` builds and publishes to GitHub Pages
+(`.github/workflows/deploy.yml`). The Supabase URL and publishable key come from
+repository **variables**, not secrets — they are browser-safe by design and end up in
+the bundle either way. The workflow copies `index.html` to `404.html` because Pages has
+no rewrite rules, so a refresh on `/portfolio` would otherwise 404.
+
+### Moving off GitHub Pages later
+
+The frontend is a static bundle and the database stays where it is, so a move is
+mostly a copy:
+
+1. `VITE_BASE_PATH=/ npm run build` — the app reads the base back through `BASE_URL`,
+   so serving from a domain root needs no code change.
+2. Upload `dist/` to the new host (nginx on a VPS, Vercel, Netlify, S3 — all fine).
+3. Add the new origin to Supabase → Authentication → URL Configuration → Redirect URLs.
+
+`vercel.json` and `netlify.toml` are already written for those two hosts, including the
+security headers GitHub Pages cannot serve. On a VPS the same headers translate almost
+line for line into an nginx `add_header` block.
+
 ## Scripts
 
 ```bash
@@ -92,6 +116,13 @@ npm run build
 ```bash
 npm run lint
 ```
+
+```bash
+npm test
+```
+
+The Playwright suite runs on port 5174 in Vite's `e2e` mode, against the browser-local
+demo backend — it never touches the real Supabase project.
 
 ## Legal note
 
