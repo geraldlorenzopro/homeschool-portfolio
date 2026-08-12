@@ -9,7 +9,15 @@
 
 -- ── areas (the old `subjects`, renamed and opened up) ─────────────────────
 
-alter table homeschool.subjects rename to areas;
+do $rename$
+begin
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'homeschool' and table_name = 'subjects'
+  ) then
+    execute 'alter table homeschool.subjects rename to areas';
+  end if;
+end $rename$;
 alter table homeschool.areas add column if not exists is_custom boolean not null default false;
 
 -- The ten areas an IEP usually covers. Existing portfolios keep Language Arts
@@ -97,12 +105,20 @@ create table if not exists homeschool.entries (
 );
 
 -- Carry over anything already logged, so nothing written is lost.
-insert into homeschool.entries (student_id, area_id, title, method, date, hours, created_at)
-select a.student_id, a.subject_id, a.title, a.notes, a.date, a.hours, a.created_at
-from homeschool.activities a
-where exists (select 1 from homeschool.areas ar where ar.id = a.subject_id);
+do $carry$
+begin
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'homeschool' and table_name = 'activities'
+  ) then
+    insert into homeschool.entries (student_id, area_id, title, method, date, hours, created_at)
+    select a.student_id, a.subject_id, a.title, a.notes, a.date, a.hours, a.created_at
+    from homeschool.activities a
+    where exists (select 1 from homeschool.areas ar where ar.id = a.subject_id);
 
-drop table if exists homeschool.activities;
+    drop table homeschool.activities;
+  end if;
+end $carry$;
 
 -- ── evaluations ───────────────────────────────────────────────────────────
 
@@ -148,14 +164,23 @@ alter table homeschool.work_samples
   add column if not exists goal_id uuid references homeschool.goals (id) on delete set null,
   add column if not exists sort int not null default 0;
 
-update homeschool.work_samples w
-set area_id = a.id
-from homeschool.areas a
-where a.student_id = w.student_id
-  and w.area_id is null
-  and a.key = w.subject;
+do $samples$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'homeschool'
+      and table_name = 'work_samples' and column_name = 'subject'
+  ) then
+    update homeschool.work_samples w
+    set area_id = a.id
+    from homeschool.areas a
+    where a.student_id = w.student_id
+      and w.area_id is null
+      and a.key = w.subject;
 
-alter table homeschool.work_samples drop column if exists subject;
+    alter table homeschool.work_samples drop column subject;
+  end if;
+end $samples$;
 
 -- Books gain a sort so they can be reordered by hand like everything else.
 alter table homeschool.books add column if not exists sort int not null default 0;
