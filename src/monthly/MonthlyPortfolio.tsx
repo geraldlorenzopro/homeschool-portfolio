@@ -4,7 +4,10 @@ import {
   CHECKLIST_RECOMMENDED,
   CHECKLIST_REQUIRED,
   MONTHS,
+  WEEKDAYS,
   daysInMonth,
+  isWeekend,
+  weekdayOf,
   useMonthlyYear,
   type MonthlyYear,
 } from './store'
@@ -502,11 +505,21 @@ function MonthLog({
       <div className="log-grid">
         <div className="log-row log-head">
           <div className="log-subject">Subject / Date</div>
-          {days.map((d) => (
-            <div key={d} className="log-day num" data-missing={d > real || undefined}>
-              {d}
-            </div>
-          ))}
+          {days.map((d) => {
+            const missing = d > real
+            const weekday = missing ? null : weekdayOf(month.year, month.month, d)
+            return (
+              <div
+                key={d}
+                className="log-day"
+                data-missing={missing || undefined}
+                data-weekend={(weekday !== null && isWeekend(weekday)) || undefined}
+              >
+                <span className="log-weekday">{weekday === null ? '' : WEEKDAYS[weekday]}</span>
+                <span className="num">{d}</span>
+              </div>
+            )
+          })}
         </div>
 
         {year.subjects.map((label, index) => (
@@ -527,8 +540,14 @@ function MonthLog({
             {days.map((d) => {
               const missing = d > real
               const checked = (record.marks[index] ?? []).includes(d)
+              const weekend = !missing && isWeekend(weekdayOf(month.year, month.month, d))
               return (
-                <div key={d} className="log-cell" data-missing={missing || undefined}>
+                <div
+                  key={d}
+                  className="log-cell"
+                  data-missing={missing || undefined}
+                  data-weekend={weekend || undefined}
+                >
                   {!missing && (
                     <input
                       type="checkbox"

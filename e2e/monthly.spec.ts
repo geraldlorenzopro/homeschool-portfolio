@@ -127,4 +127,30 @@ test.describe('The monthly log', () => {
       'Read her first chapter book.',
     )
   })
+  test('heads each day with its weekday, and greys the weekends', async ({ app }) => {
+    await openMonthly(app)
+    await page_(app, 'January 2026').click()
+
+    // 1 January 2026 was a Thursday. Written out rather than computed, so a
+    // calendar that drifts by a day fails here instead of printing quietly.
+    const heads = app.locator('.log-head .log-day')
+    await expect(heads.nth(0)).toContainText('Thu')
+    await expect(heads.nth(0)).toContainText('1')
+    await expect(heads.nth(4)).toContainText('Mon')
+    await expect(heads.nth(30)).toContainText('Sat')
+
+    // Nine weekend days in January 2026: the 3rd, 4th, 10th, 11th, 17th, 18th,
+    // 24th, 25th and 31st.
+    await expect(app.locator('.log-head .log-day[data-weekend]')).toHaveCount(9)
+    await expect(app.locator('.log-row:not(.log-head) .log-cell[data-weekend]')).toHaveCount(45)
+
+    // February starts on a Sunday and stops at 28 — no weekday on a day the
+    // month does not have.
+    await page_(app, 'February 2026').click()
+    const feb = app.locator('.log-head .log-day')
+    await expect(feb.nth(0)).toContainText('Sun')
+    await expect(feb.nth(27)).toContainText('Sat')
+    await expect(feb.nth(28)).toHaveAttribute('data-missing', 'true')
+    await expect(feb.nth(28)).not.toContainText(/[A-Za-z]/)
+  })
 })

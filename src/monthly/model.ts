@@ -19,6 +19,20 @@ export function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate()
 }
 
+export const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
+
+/**
+ * Which weekday a date falls on, 0 = Sunday.
+ *
+ * Built from the three numbers rather than parsed from a string, so it is the
+ * calendar's answer and not the browser timezone's.
+ */
+export function weekdayOf(year: number, month: number, day: number): number {
+  return new Date(year, month - 1, day).getDay()
+}
+
+export const isWeekend = (weekday: number) => weekday === 0 || weekday === 6
+
 export const CHECKLIST_REQUIRED = [
   { key: 'log', label: 'A **log of educational activities**, kept around the time of the learning' },
   { key: 'titles', label: '**Titles of materials** read or used during the year' },

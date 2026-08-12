@@ -741,7 +741,7 @@ textarea.lined {
 }
 .log-row {
   display: grid;
-  grid-template-columns: 1.35in repeat(31, 1fr);
+  grid-template-columns: 1.2in repeat(31, 1fr);
   border-bottom: 1px solid var(--color-divider);
 }
 .log-row:last-child { border-bottom: 0; }
@@ -773,7 +773,26 @@ textarea.lined {
   border-left: 1px solid var(--color-divider);
   text-align: center;
   font-size: 8px;
-  padding: 6px 0;
+  padding: 4px 0 5px;
+  line-height: 1.25;
+}
+/* The weekday sits above its number: at 0.2in a column takes three letters
+   comfortably, and a month of ticks reads very differently once you can see
+   which of them fell on a Saturday. */
+.log-weekday {
+  display: block;
+  font-size: 6.5px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+.log-day[data-weekend] .log-weekday,
+.log-day[data-weekend] .num {
+  color: color-mix(in srgb, var(--color-text) 32%, transparent);
+}
+.log-day[data-weekend],
+.log-cell[data-weekend] {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 .log-cell {
   border-left: 1px solid var(--color-divider);
