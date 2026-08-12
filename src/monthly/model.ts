@@ -1,4 +1,4 @@
-/** August 2025 → July 2026, the order the printed portfolio runs in. */
+/** August 2025 → June 2026: the school year, in the order the portfolio prints. */
 export const MONTHS: { key: string; label: string; year: number; month: number }[] = [
   { key: '2025-08', label: 'August 2025', year: 2025, month: 8 },
   { key: '2025-09', label: 'September 2025', year: 2025, month: 9 },
@@ -11,7 +11,6 @@ export const MONTHS: { key: string; label: string; year: number; month: number }
   { key: '2026-04', label: 'April 2026', year: 2026, month: 4 },
   { key: '2026-05', label: 'May 2026', year: 2026, month: 5 },
   { key: '2026-06', label: 'June 2026', year: 2026, month: 6 },
-  { key: '2026-07', label: 'July 2026', year: 2026, month: 7 },
 ]
 
 /** Day 0 of the next month is the last day of this one. */

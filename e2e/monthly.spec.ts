@@ -47,11 +47,13 @@ test.describe('One link, two portfolios', () => {
 })
 
 test.describe('The monthly log', () => {
-  test('runs August 2025 to July 2026', async ({ app }) => {
+  test('runs August 2025 to June 2026, and stops there', async ({ app }) => {
     await openMonthly(app)
     await expect(page_(app, 'August 2025')).toBeVisible()
-    await expect(page_(app, 'July 2026')).toBeVisible()
-    await expect(app.locator('.section-link')).toHaveCount(15) // cover + record + child + 12
+    await expect(page_(app, 'June 2026')).toBeVisible()
+    // The school year ends in June, so there is no July sheet to leave blank.
+    await expect(page_(app, 'July 2026')).toHaveCount(0)
+    await expect(app.locator('.section-link')).toHaveCount(14) // cover + record + child + 11
   })
 
   test('a ticked day saves and survives a reload', async ({ app }) => {
