@@ -11,7 +11,7 @@ test.describe('The printed portfolio', () => {
     const doc = app.locator('.doc')
 
     await expect(doc.getByRole('heading', { name: 'Goals and instruction by area' })).toBeVisible()
-    await expect(doc.getByRole('heading', { name: 'Reading', exact: true })).toBeVisible()
+    await expect(doc.getByRole('heading', { name: 'Language Arts' })).toBeVisible()
     await expect(doc.getByRole('heading', { name: 'Fine Motor' })).toBeVisible()
 
     // A goal carries its status, its provenance, and the sessions beneath it.
@@ -140,7 +140,7 @@ test.describe('Quick log', () => {
   test('files a session into its area and goal', async ({ app }) => {
     await goToQuickLog(app)
     await app.getByLabel('What was covered').fill('Rhyming pairs')
-    await app.getByLabel('Area', { exact: true }).selectOption({ label: 'Reading' })
+    await app.getByLabel('Area', { exact: true }).selectOption({ label: 'Language Arts' })
     await app.getByLabel('Goal worked on').selectOption({ index: 2 })
     await app.getByLabel('Method used').fill('Picture cards.')
     await app.getByLabel('Outcome — how the child responded').fill('Matched 8 of 10.')
@@ -151,7 +151,7 @@ test.describe('Quick log', () => {
     )
 
     await app.getByRole('link', { name: 'A · Section panel' }).click()
-    await openSection(app, 'Sessions')
+    await openSection(app, 'Language Arts')
     await expect(row(app, 'Rhyming pairs')).toContainText('Method: Picture cards.')
   })
 

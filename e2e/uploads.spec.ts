@@ -5,7 +5,7 @@ test.describe('Uploads', () => {
     await openSection(app, 'Work samples')
 
     await app.getByLabel('What the work is').fill('Watercolour of the garden')
-    await app.getByLabel('Area', { exact: true }).selectOption({ label: 'Reading' })
+    await app.getByLabel('Area', { exact: true }).selectOption({ label: 'Language Arts' })
     await app.getByLabel('Date').fill('2026-04-02')
     await app.getByLabel('Photo or scan').setInputFiles({
       name: 'garden.png',

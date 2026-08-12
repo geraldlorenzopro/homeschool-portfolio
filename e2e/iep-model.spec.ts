@@ -5,8 +5,7 @@ test.describe('Areas', () => {
     await openSection(app, 'Areas')
     await expect(sectionCount(app, 'Areas')).toHaveText('10')
     for (const label of [
-      'Reading',
-      'Writing',
+      'Language Arts',
       'Mathematics',
       'Speech & Language',
       'Fine Motor',
@@ -15,11 +14,12 @@ test.describe('Areas', () => {
       'Behavior',
       'Daily Living / Self-Help',
       'Attention & Study Skills',
+      'Sensory & Regulation',
     ]) {
       await expect(row(app, label).first()).toBeVisible()
     }
     // Reading carries two seeded goals.
-    await expect(row(app, 'Reading').first().locator('td').nth(2)).toHaveText('2')
+    await expect(row(app, 'Language Arts').first().locator('td').nth(2)).toHaveText('2')
   })
 
   test('adds a custom area and marks it as one', async ({ app }) => {
@@ -50,12 +50,13 @@ test.describe('Areas', () => {
     const messages: string[] = []
     app.on('dialog', (d) => messages.push(d.message()))
 
-    await row(app, 'Reading').first().getByRole('button', { name: 'Remove' }).click()
+    await row(app, 'Language Arts').first().getByRole('button', { name: 'Remove' }).click()
     await expect.poll(() => messages.join(' ')).toContain('2 goal(s)')
 
     await expect(sectionCount(app, 'Areas')).toHaveText('9')
-    // Its goals went with it.
+    // Its goals went with it, and so did its sidebar section.
     await expect(sectionCount(app, 'Goals')).toHaveText('3')
+    await expect(app.locator('.section-link', { hasText: 'Language Arts' })).toHaveCount(0)
   })
 })
 
@@ -64,7 +65,7 @@ test.describe('Goals', () => {
     await openSection(app, 'Goals')
     await expect(sectionCount(app, 'Goals')).toHaveText('5')
 
-    await expect(app.getByRole('heading', { name: 'Reading' })).toBeVisible()
+    await expect(app.getByRole('heading', { name: 'Language Arts' })).toBeVisible()
     await expect(app.getByRole('heading', { name: 'Fine Motor' })).toBeVisible()
 
     const met = row(app, 'read CVC words with 80% accuracy')
@@ -79,7 +80,7 @@ test.describe('Goals', () => {
   test('adds a goal and counts the sessions recorded against it', async ({ app }) => {
     await openSection(app, 'Goals')
     await app.getByLabel('Goal', { exact: true }).fill('Will write first and last name unaided.')
-    await app.getByLabel('Area', { exact: true }).selectOption({ label: 'Writing' })
+    await app.getByLabel('Area', { exact: true }).selectOption({ label: 'Fine Motor' })
     await app.getByLabel('Status').selectOption('in_progress')
     await app.getByRole('button', { name: 'Add goal' }).click()
 
@@ -110,18 +111,23 @@ test.describe('Goals', () => {
     await expect(sectionCount(app, 'Goals')).toHaveText('4')
 
     // The two sessions that referenced it survive.
-    await expect(sectionCount(app, 'Sessions')).toHaveText('5')
-    await openSection(app, 'Sessions')
+    await openSection(app, 'Language Arts')
+    await expect(sectionCount(app, 'Language Arts')).toHaveText('3')
     await expect(row(app, 'Short vowel word families')).toBeVisible()
     await expect(row(app, 'Short vowel word families')).not.toContainText('Goal:')
   })
 })
 
-test.describe('Sessions', () => {
-  test('records area, goal, method and outcome', async ({ app }) => {
-    await openSection(app, 'Sessions')
-    await expect(sectionCount(app, 'Sessions')).toHaveText('5')
+test.describe('Sessions inside an area', () => {
+  test('each area is its own section, as the design always had', async ({ app }) => {
+    await expect(sectionCount(app, 'Language Arts')).toHaveText('3')
+    await expect(sectionCount(app, 'Mathematics')).toHaveText('1')
+    await expect(sectionCount(app, 'Fine Motor')).toHaveText('1')
+    await expect(sectionCount(app, 'Behavior')).toHaveText('0')
+  })
 
+  test('records the goal, method and outcome of a session', async ({ app }) => {
+    await openSection(app, 'Language Arts')
     const seeded = row(app, 'Short vowel word families')
     await expect(seeded).toContainText('Goal: Given a decodable text')
     await expect(seeded).toContainText('Method: Letter tiles')
@@ -129,12 +135,17 @@ test.describe('Sessions', () => {
     await expect(seeded.locator('.pill')).toHaveText('Independently')
   })
 
+  test('a section only shows its own area', async ({ app }) => {
+    await openSection(app, 'Mathematics')
+    await expect(row(app, 'Addition within 20')).toBeVisible()
+    await expect(row(app, 'Short vowel word families')).toHaveCount(0)
+    // And the goal picker only offers this area's goals.
+    await expect(app.getByLabel('Goal worked on').locator('option')).toHaveCount(2)
+  })
+
   test('adds a session against a goal', async ({ app }) => {
-    await openSection(app, 'Sessions')
-    await app.getByLabel('Area', { exact: true }).selectOption({ label: 'Mathematics' })
-    await app
-      .getByLabel('Goal worked on')
-      .selectOption({ index: 1 })
+    await openSection(app, 'Mathematics')
+    await app.getByLabel('Goal worked on').selectOption({ index: 1 })
     await app.getByLabel('What was covered').fill('Doubles facts')
     await app.getByLabel('Method used to work the goal').fill('Ten-frame cards, five minutes.')
     await app.getByLabel('Outcome — how the child responded').fill('Recalled doubles to 10.')
@@ -143,43 +154,31 @@ test.describe('Sessions', () => {
 
     const added = row(app, 'Doubles facts')
     await expect(added).toContainText('Method: Ten-frame cards')
-    await expect(added).toContainText('Outcome: Recalled doubles to 10.')
     await expect(added.locator('.pill')).toHaveText('With partial support')
-    await expect(sectionCount(app, 'Sessions')).toHaveText('6')
+    await expect(sectionCount(app, 'Mathematics')).toHaveText('2')
 
     await openSection(app, 'Goals')
-    await expect(
-      row(app, 'solve addition facts within 20').locator('td').nth(3),
-    ).toHaveText('2')
+    await expect(row(app, 'solve addition facts within 20').locator('td').nth(3)).toHaveText('2')
   })
 
   test('edits a session in place', async ({ app }) => {
-    await openSection(app, 'Sessions')
+    await openSection(app, 'Mathematics')
     await row(app, 'Addition within 20').getByRole('button', { name: 'Edit' }).click()
     await editingRow(app).getByLabel('Outcome', { exact: true }).fill('Now 20 of 20 with counters.')
     await app.getByRole('button', { name: 'Save' }).click()
-
     await expect(row(app, 'Addition within 20')).toContainText('Now 20 of 20 with counters.')
-  })
-
-  test('changing the area clears a goal that no longer belongs', async ({ app }) => {
-    await openSection(app, 'Sessions')
-    await app.getByLabel('Area', { exact: true }).selectOption({ label: 'Reading' })
-    await app.getByLabel('Goal worked on').selectOption({ index: 2 })
-    await app.getByLabel('Area', { exact: true }).selectOption({ label: 'Behavior' })
-    await expect(app.getByLabel('Goal worked on')).toHaveValue('')
   })
 })
 
 test.describe('Date and hour switches', () => {
   test('hours are off by default and appear once switched on', async ({ app }) => {
-    await openSection(app, 'Sessions')
+    await openSection(app, 'Language Arts')
     await expect(app.getByLabel('Hours', { exact: true })).toHaveCount(0)
 
     await openSection(app, 'Student information')
     await app.getByLabel('Record hours').check()
 
-    await openSection(app, 'Sessions')
+    await openSection(app, 'Language Arts')
     await expect(app.getByLabel('Hours', { exact: true })).toBeVisible()
     await expect(app.getByRole('columnheader', { name: 'Hours' })).toBeVisible()
   })
@@ -188,7 +187,7 @@ test.describe('Date and hour switches', () => {
     await openSection(app, 'Student information')
     await app.getByLabel('Record dates').uncheck()
 
-    await openSection(app, 'Sessions')
+    await openSection(app, 'Language Arts')
     await expect(app.getByLabel('Date', { exact: true })).toHaveCount(0)
     await expect(app.getByRole('columnheader', { name: 'Date' })).toHaveCount(0)
 

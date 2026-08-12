@@ -47,6 +47,14 @@ export function SectionPanel({ portfolio }: { portfolio: Portfolio }) {
       (v) => v.trim() !== '',
     )
 
+  const areaSections: SectionDef[] = areas.map((area) => ({
+    key: `area:${area.id}`,
+    label: area.label,
+    count: entries.filter((e) => e.area_id === area.id).length,
+    title: area.label,
+    hint: 'Every session you log here becomes a dated row in the portfolio, under the goal it worked.',
+  }))
+
   const sections: SectionDef[] = [
     {
       key: 'info',
@@ -77,19 +85,13 @@ export function SectionPanel({ portfolio }: { portfolio: Portfolio }) {
       hint: 'What the year is working toward, grouped by area. Copy them from the official IEP or write your own — each one is marked so the evaluator can tell which is which.',
     },
     {
-      key: 'entries',
-      label: 'Sessions',
-      count: entries.length,
-      title: 'Sessions',
-      hint: 'One row per working session: what you covered, the method you used to work the goal, and how the child responded.',
-    },
-    {
       key: 'evaluations',
       label: 'Evaluations',
       count: evaluations.length,
       title: 'Evaluations',
       hint: 'Psychoeducational, speech, therapy or medical evaluations done recently. Record the findings and attach the report.',
     },
+    ...areaSections,
     {
       key: 'curriculum',
       label: 'Curriculum used',
@@ -120,8 +122,13 @@ export function SectionPanel({ portfolio }: { portfolio: Portfolio }) {
     },
   ]
 
-  const filled = sections.filter((s) => s.count === 'ok' || s.count > 0).length
-  const pct = Math.round((filled / sections.length) * 100)
+  // Areas count as one item between them, not ten. Most portfolios use two or
+  // three of the IEP domains, and the empty ones are not gaps to be filled —
+  // counting each one would make a complete year read as 60%.
+  const fixed = sections.filter((s) => !s.key.startsWith('area:'))
+  const filledFixed = fixed.filter((s) => s.count === 'ok' || s.count > 0).length
+  const anyAreaLogged = areaSections.some((s) => s.count !== 'ok' && s.count > 0)
+  const pct = Math.round(((filledFixed + (anyAreaLogged ? 1 : 0)) / (fixed.length + 1)) * 100)
   const current = sections.find((s) => s.key === section) ?? sections[0]
 
   return (
@@ -211,9 +218,19 @@ export function SectionPanel({ portfolio }: { portfolio: Portfolio }) {
         {section === 'profile' && <ProfileSection student={student} attachments={attachments} />}
         {section === 'areas' && <AreasSection areas={areas} goals={goals} entries={entries} />}
         {section === 'goals' && <GoalsSection areas={areas} goals={goals} entries={entries} />}
-        {section === 'entries' && (
-          <EntriesSection student={student} areas={areas} goals={goals} entries={entries} />
-        )}
+        {section.startsWith('area:') &&
+          (() => {
+            const area = areas.find((a) => `area:${a.id}` === section)
+            return area ? (
+              <EntriesSection
+                key={area.id}
+                student={student}
+                area={area}
+                goals={goals}
+                entries={entries}
+              />
+            ) : null
+          })()}
         {section === 'evaluations' && <EvaluationsSection rows={evaluations} />}
         {section === 'curriculum' && <CurriculumSection rows={curriculums} areas={areas} />}
         {section === 'books' && <ReadingListSection rows={books} student={student} />}

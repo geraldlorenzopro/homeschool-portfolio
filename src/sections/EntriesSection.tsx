@@ -4,7 +4,7 @@ import { useDragOrder } from '@/components/useDragOrder'
 import { useInlineEdit } from '@/components/useInlineEdit'
 import { EmptyState, Field } from '@/components/ui'
 import { useAction } from '@/data/store'
-import { areaLabel, fmtDate, shortGoal, today } from '@/lib/format'
+import { fmtDate, shortGoal, today } from '@/lib/format'
 import {
   OUTCOME_LEVELS,
   OUTCOME_LEVEL_LABEL,
@@ -39,16 +39,17 @@ const blank = (areaId: string): Draft => ({
 
 export function EntriesSection({
   student,
-  areas,
+  area,
   goals,
   entries,
 }: {
   student: Student
-  areas: Area[]
+  /** The one area this section records. */
+  area: Area
   goals: Goal[]
   entries: Entry[]
 }) {
-  const [form, setForm] = useState<Draft>(() => blank(areas[0]?.id ?? ''))
+  const [form, setForm] = useState<Draft>(() => blank(area.id))
   const edit = useInlineEdit<Entry>()
 
   const add = useAction<Draft>((repo, input) => repo.add('entries', input))
@@ -72,12 +73,12 @@ export function EntriesSection({
     (ids) => reorder.mutate(ids),
   )
 
-  const goalsFor = (areaId: string) => goals.filter((g) => g.area_id === areaId)
 
-  // The selected area can disappear underneath the form — deleted in the Areas
-  // section, or reset away. Fall back rather than posting a dangling id.
-  const areaId = areas.some((a) => a.id === form.area_id) ? form.area_id : (areas[0]?.id ?? '')
-  const goalId = goals.some((g) => g.id === form.goal_id) ? form.goal_id : null
+  // Only this area's goals and entries belong here.
+  const areaGoals = goals.filter((g) => g.area_id === area.id)
+  const rows = entries.filter((e) => e.area_id === area.id)
+  const areaId = area.id
+  const goalId = areaGoals.some((g) => g.id === form.goal_id) ? form.goal_id : null
 
   function submit() {
     if (!form.title.trim() || !areaId) return
@@ -90,30 +91,9 @@ export function EntriesSection({
     )
   }
 
-  if (areas.length === 0) {
-    return <EmptyState>Add an area first — every entry belongs to one.</EmptyState>
-  }
-
   return (
     <div className="editor">
       <div className="add-card" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}>
-        <Field label="Area">
-          {(id) => (
-            <select
-              id={id}
-              className="input"
-              value={areaId}
-              onChange={(e) => setForm({ ...form, area_id: e.target.value, goal_id: null })}
-            >
-              {areas.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-
         <Field label="Goal worked on">
           {(id) => (
             <select
@@ -123,7 +103,7 @@ export function EntriesSection({
               onChange={(e) => setForm({ ...form, goal_id: e.target.value || null })}
             >
               <option value="">No specific goal</option>
-              {goalsFor(areaId).map((g) => (
+              {areaGoals.map((g) => (
                 <option key={g.id} value={g.id}>
                   {shortGoal(g.text, 60)}
                 </option>
@@ -230,10 +210,10 @@ export function EntriesSection({
         </button>
       </div>
 
-      {entries.length === 0 ? (
+      {rows.length === 0 ? (
         <EmptyState>
-          Nothing recorded yet. Each entry captures one session: what you covered, how you taught
-          it, and how the child responded.
+          Nothing recorded for {area.label} yet. Each entry captures one session: what you
+          covered, how you taught it, and how the child responded.
         </EmptyState>
       ) : (
         <table className="table">
@@ -242,13 +222,12 @@ export function EntriesSection({
               <th style={{ width: 28 }} />
               {student.show_dates && <th style={{ width: 110 }}>Date</th>}
               <th>Session</th>
-              <th style={{ width: 150 }}>Area</th>
               {student.show_hours && <th style={{ width: 60 }}>Hours</th>}
               <th style={{ width: 150 }} />
             </tr>
           </thead>
           <tbody>
-            {entries.map((entry) => {
+            {rows.map((entry) => {
               const editing = edit.isEditing(entry.id)
               const goal = goals.find((g) => g.id === entry.goal_id)
               return (
@@ -289,7 +268,7 @@ export function EntriesSection({
                           aria-label="Goal worked on"
                         >
                           <option value="">No specific goal</option>
-                          {goalsFor(edit.draft.area_id).map((g) => (
+                          {areaGoals.map((g) => (
                             <option key={g.id} value={g.id}>
                               {shortGoal(g.text, 60)}
                             </option>
@@ -341,28 +320,6 @@ export function EntriesSection({
                           </div>
                         )}
                       </>
-                    )}
-                  </td>
-
-                  <td style={{ opacity: 0.75 }}>
-                    {editing && edit.draft ? (
-                      <select
-                        className="input"
-                        value={edit.draft.area_id}
-                        onChange={(e) => {
-                          edit.set('area_id', e.target.value)
-                          edit.set('goal_id', null)
-                        }}
-                        aria-label="Area"
-                      >
-                        {areas.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      areaLabel(entry.area_id, areas)
                     )}
                   </td>
 

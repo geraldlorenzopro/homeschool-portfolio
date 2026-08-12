@@ -22,16 +22,16 @@ set search_path = homeschool, pg_temp
 as $fn$
 begin
   insert into homeschool.areas (student_id, key, label, sort) values
-    (new.id, 'reading',        'Reading',                  1),
-    (new.id, 'writing',        'Writing',                  2),
-    (new.id, 'math',           'Mathematics',              3),
-    (new.id, 'speech',         'Speech & Language',        4),
-    (new.id, 'fine_motor',     'Fine Motor',               5),
-    (new.id, 'gross_motor',    'Gross Motor',              6),
-    (new.id, 'social',         'Social-Emotional',         7),
-    (new.id, 'behavior',       'Behavior',                 8),
-    (new.id, 'daily_living',   'Daily Living / Self-Help', 9),
-    (new.id, 'attention',      'Attention & Study Skills', 10)
+    (new.id, 'ela',            'Language Arts',            1),
+    (new.id, 'math',           'Mathematics',              2),
+    (new.id, 'speech',         'Speech & Language',        3),
+    (new.id, 'fine_motor',     'Fine Motor',               4),
+    (new.id, 'gross_motor',    'Gross Motor',              5),
+    (new.id, 'social',         'Social-Emotional',         6),
+    (new.id, 'behavior',       'Behavior',                 7),
+    (new.id, 'daily_living',   'Daily Living / Self-Help', 8),
+    (new.id, 'attention',      'Attention & Study Skills', 9),
+    (new.id, 'sensory',        'Sensory & Regulation',     10)
   on conflict (student_id, key) do nothing;
   return new;
 end;
@@ -46,20 +46,18 @@ create trigger students_seed_areas
 drop function if exists homeschool.seed_student_subjects();
 
 -- The trigger only fires for new students, so students created under 0001
--- would keep just Language Arts and Mathematics. Bring them up to the full
--- set: rename the two they have, then add the missing eight.
-update homeschool.areas set key = 'reading', label = 'Reading' where key = 'ela';
-update homeschool.areas set label = 'Mathematics' where key = 'math';
-
+-- would keep just Language Arts and Mathematics. Those two stay exactly as
+-- they are — they are the portfolio's spine — and the eight IEP domains are
+-- added alongside them.
 insert into homeschool.areas (student_id, key, label, sort)
 select s.id, d.key, d.label, d.sort
 from homeschool.students s
 cross join (values
-  ('reading', 'Reading', 1), ('writing', 'Writing', 2), ('math', 'Mathematics', 3),
-  ('speech', 'Speech & Language', 4), ('fine_motor', 'Fine Motor', 5),
-  ('gross_motor', 'Gross Motor', 6), ('social', 'Social-Emotional', 7),
-  ('behavior', 'Behavior', 8), ('daily_living', 'Daily Living / Self-Help', 9),
-  ('attention', 'Attention & Study Skills', 10)
+  ('ela', 'Language Arts', 1), ('math', 'Mathematics', 2),
+  ('speech', 'Speech & Language', 3), ('fine_motor', 'Fine Motor', 4),
+  ('gross_motor', 'Gross Motor', 5), ('social', 'Social-Emotional', 6),
+  ('behavior', 'Behavior', 7), ('daily_living', 'Daily Living / Self-Help', 8),
+  ('attention', 'Attention & Study Skills', 9), ('sensory', 'Sensory & Regulation', 10)
 ) as d(key, label, sort)
 on conflict (student_id, key) do nothing;
 
@@ -155,7 +153,7 @@ set area_id = a.id
 from homeschool.areas a
 where a.student_id = w.student_id
   and w.area_id is null
-  and a.key = case w.subject when 'ela' then 'reading' else w.subject end;
+  and a.key = w.subject;
 
 alter table homeschool.work_samples drop column if exists subject;
 

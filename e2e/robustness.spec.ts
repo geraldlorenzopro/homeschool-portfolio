@@ -35,7 +35,7 @@ test.describe('Routing, responsiveness and resilience', () => {
     const meter = app.getByRole('progressbar')
     await expect(meter).toHaveAttribute('aria-valuenow', '100')
 
-    // Empty the reading list: 9 of 10 sections remain filled.
+    // Empty the reading list: 9 of the 10 counted items remain.
     await app.locator('.section-link', { hasText: 'Reading list' }).click()
     const removals = app.getByRole('button', { name: 'Remove' })
     for (let left = await removals.count(); left > 0; left--) {

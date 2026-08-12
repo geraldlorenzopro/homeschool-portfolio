@@ -6,9 +6,10 @@ export function uid(): string {
 
 /** The ten areas an IEP usually covers. Mirrors the trigger in migration 0002. */
 export const DEFAULT_AREAS: { key: string; label: string }[] = [
-  { key: 'reading', label: 'Reading' },
-  { key: 'writing', label: 'Writing' },
+  // The two the portfolio has always had come first and keep their names.
+  { key: 'ela', label: 'Language Arts' },
   { key: 'math', label: 'Mathematics' },
+  // The rest are the domains an IEP usually covers, there when they are needed.
   { key: 'speech', label: 'Speech & Language' },
   { key: 'fine_motor', label: 'Fine Motor' },
   { key: 'gross_motor', label: 'Gross Motor' },
@@ -16,6 +17,7 @@ export const DEFAULT_AREAS: { key: string; label: string }[] = [
   { key: 'behavior', label: 'Behavior' },
   { key: 'daily_living', label: 'Daily Living / Self-Help' },
   { key: 'attention', label: 'Attention & Study Skills' },
+  { key: 'sensory', label: 'Sensory & Regulation' },
 ]
 
 export function defaultAreas(): Area[] {
@@ -40,7 +42,7 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
   const goals = [
     {
       id: uid(),
-      area_id: areaId('reading'),
+      area_id: areaId('ela'),
       text: 'Given a decodable text, Sofía will read CVC words with 80% accuracy across three consecutive sessions.',
       status: 'met' as const,
       source: 'iep' as const,
@@ -48,7 +50,7 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
     },
     {
       id: uid(),
-      area_id: areaId('reading'),
+      area_id: areaId('ela'),
       text: 'Sofía will retell the beginning, middle and end of a story read aloud, with no more than one prompt.',
       status: 'in_progress' as const,
       source: 'iep' as const,
@@ -183,7 +185,7 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
         id: uid(),
         title: 'Explode the Code, Books 1–2',
         publisher: 'Educators Publishing Service',
-        area_id: areaId('reading'),
+        area_id: areaId('ela'),
         usage: 'Core phonics — three lessons a week, September through March',
         sort: 1,
       },
@@ -191,7 +193,7 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
         id: uid(),
         title: 'All About Reading, Level 1',
         publisher: 'All About Learning Press',
-        area_id: areaId('reading'),
+        area_id: areaId('ela'),
         usage: 'Reading fluency and decoding practice, full year',
         sort: 2,
       },
@@ -250,7 +252,7 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
       {
         id: uid(),
         title: 'Word family sort — -at, -op, -in',
-        area_id: areaId('reading'),
+        area_id: areaId('ela'),
         goal_id: goals[0].id,
         date: '2025-09-25',
         storage_path: null,

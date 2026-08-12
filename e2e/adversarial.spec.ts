@@ -9,11 +9,10 @@ test.describe('Adversarial', () => {
 
     await expect(sectionCount(app, 'Areas')).toHaveText('0')
     await expect(sectionCount(app, 'Goals')).toHaveText('0')
-    await expect(sectionCount(app, 'Sessions')).toHaveText('0')
+    // The per-area sections disappear with their areas.
+    await expect(app.locator('.section-link', { hasText: 'Language Arts' })).toHaveCount(0)
 
     await openSection(app, 'Goals')
-    await expect(app.locator('.empty-state')).toContainText('Add an area first')
-    await openSection(app, 'Sessions')
     await expect(app.locator('.empty-state')).toContainText('Add an area first')
 
     // And the document still renders rather than crashing.
@@ -24,7 +23,7 @@ test.describe('Adversarial', () => {
   test('a goal deleted while its area is open does not strand the session form', async ({ app }) => {
     await openSection(app, 'Goals')
     await row(app, 'read CVC words with 80% accuracy').getByRole('button', { name: 'Remove' }).click()
-    await openSection(app, 'Sessions')
+    await openSection(app, 'Language Arts')
     await app.getByLabel('What was covered').fill('After the goal vanished')
     await app.getByRole('button', { name: 'Add entry' }).click()
     await expect(row(app, 'After the goal vanished')).toBeVisible()
@@ -93,6 +92,6 @@ test.describe('Adversarial', () => {
     await app.getByRole('button', { name: 'Reset to sample data' }).click()
     await expect(sectionCount(app, 'Areas')).toHaveText('10')
     await expect(sectionCount(app, 'Goals')).toHaveText('5')
-    await expect(sectionCount(app, 'Sessions')).toHaveText('5')
+    await expect(sectionCount(app, 'Language Arts')).toHaveText('3')
   })
 })

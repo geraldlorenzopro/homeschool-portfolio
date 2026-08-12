@@ -37,7 +37,7 @@ test.describe('Editing in place', () => {
     for (const section of [
       'Areas',
       'Goals',
-      'Sessions',
+      'Language Arts',
       'Evaluations',
       'Curriculum used',
       'Reading list',
@@ -89,12 +89,14 @@ test.describe('Counts and completeness', () => {
     await expect(sectionCount(app, 'Child profile')).toHaveText('✓')
     await expect(sectionCount(app, 'Areas')).toHaveText('10')
     await expect(sectionCount(app, 'Goals')).toHaveText('5')
-    await expect(sectionCount(app, 'Sessions')).toHaveText('5')
+    await expect(sectionCount(app, 'Language Arts')).toHaveText('3')
+    await expect(sectionCount(app, 'Mathematics')).toHaveText('1')
     await expect(sectionCount(app, 'Evaluations')).toHaveText('1')
     await expect(sectionCount(app, 'Curriculum used')).toHaveText('4')
     await expect(sectionCount(app, 'Reading list')).toHaveText('4')
     await expect(sectionCount(app, 'Work samples')).toHaveText('3')
     await expect(sectionCount(app, 'Support documents (IEP)')).toHaveText('1')
+    // Areas count as one item, so a full year still reads 100%.
     await expect(app.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
   })
 
