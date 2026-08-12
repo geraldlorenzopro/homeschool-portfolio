@@ -217,16 +217,23 @@ export function createSupabaseRepo(sb: AppSupabaseClient, userId: string): Repo 
       const bucket = BUCKET[collection]
       const uploaded = file && bucket ? await upload(bucket, studentId, file) : null
 
-      const { count } = await sb
+      // The last sort, not the number of rows. Counting breaks as soon as
+      // anything is deleted: delete one of 35 and the next row is inserted at
+      // 35 too, tying with a row that is already there, and the two swap places
+      // between refetches.
+      const { data: last } = await sb
         .from(TABLE[collection])
-        .select('id', { count: 'exact', head: true })
+        .select('sort')
         .eq('student_id', studentId)
+        .order('sort', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
       const { data, error } = await sb
         .from(TABLE[collection])
         .insert({
           student_id: studentId,
-          sort: (count ?? 0) + 1,
+          sort: ((last?.sort as number | undefined) ?? 0) + 1,
           ...forDatabase(input as Record<string, unknown>),
           ...(uploaded ?? {}),
         })
