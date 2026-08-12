@@ -70,6 +70,30 @@ export interface MonthlyCurriculum {
   sort: number
 }
 
+/** The kinds a Florida folder usually carries. Free text underneath. */
+export const DOCUMENT_KINDS = [
+  'Letter of Intent',
+  'Annual evaluation',
+  'Standardized test result',
+  'Immunization / medical',
+  'Certificate or award',
+  'Correspondence with the district',
+  'Other',
+] as const
+
+export interface MonthlyDocument {
+  id: string
+  title: string
+  kind: string
+  document_date: string
+  note: string
+  file_name: string
+  mime: string | null
+  size_bytes: number | null
+  sort: number
+  url: string | null
+}
+
 /** One piece of the child's work: a photo of a page, or a scanned PDF. */
 export interface MonthlySample {
   id: string
@@ -107,6 +131,7 @@ export interface MonthlyYear {
   months: Record<string, MonthRecord>
   curriculums: MonthlyCurriculum[]
   samples: MonthlySample[]
+  documents: MonthlyDocument[]
 }
 
 export function blankMonth(): MonthRecord {
@@ -133,5 +158,6 @@ export function blankYear(): MonthlyYear {
     months: Object.fromEntries(MONTHS.map((m) => [m.key, blankMonth()])),
     curriculums: [],
     samples: [],
+    documents: [],
   }
 }

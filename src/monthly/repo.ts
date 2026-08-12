@@ -10,6 +10,7 @@ import {
   MONTHS,
   blankYear,
   type MonthlyCurriculum,
+  type MonthlyDocument,
   type MonthlySample,
   type MonthlyYear,
   type MonthRecord,
@@ -17,6 +18,7 @@ import {
 
 const PHOTO_BUCKET = 'portfolio-photos'
 const SAMPLE_BUCKET = 'portfolio-work-samples'
+const DOCUMENT_BUCKET = 'portfolio-documents'
 const LOCAL_KEY = 'homeschool-monthly-fl-v1'
 const YEAR_LABEL = '2025–2026'
 
@@ -27,6 +29,7 @@ export type YearPatch = Partial<
 export type MonthPatch = Partial<Omit<MonthRecord, 'marks'>>
 export type CurriculumPatch = Partial<Omit<MonthlyCurriculum, 'id'>>
 export type SamplePatch = Partial<Omit<MonthlySample, 'id' | 'url'>>
+export type DocumentPatch = Partial<Omit<MonthlyDocument, 'id' | 'url'>>
 
 /**
  * Writes are granular on purpose. The portfolio is filled in across twelve
@@ -60,6 +63,11 @@ export interface MonthlyRepo {
   addSamples(studentId: string, files: File[], patch?: SamplePatch): Promise<void>
   setSample(studentId: string, id: string, patch: SamplePatch): Promise<void>
   removeSample(studentId: string, id: string): Promise<void>
+
+  /** Same batching rules as the samples; a different shelf. */
+  addDocuments(studentId: string, files: File[], patch?: DocumentPatch): Promise<void>
+  setDocument(studentId: string, id: string, patch: DocumentPatch): Promise<void>
+  removeDocument(studentId: string, id: string): Promise<void>
 }
 
 const uid = () => crypto.randomUUID()
@@ -209,6 +217,45 @@ function createLocalMonthlyRepo(): MonthlyRepo {
         d.samples = d.samples.filter((w) => w.id !== id)
       })
     },
+
+    async addDocuments(_s, files, patch) {
+      const failures: string[] = []
+      for (const file of files) {
+        try {
+          const { blob, mime } = await prepareUpload(file)
+          const url = await readAsDataUrl(blob)
+          await mutate((d) => {
+            d.documents.push({
+              id: uid(),
+              title: titleFromFile(file),
+              kind: 'Other',
+              document_date: '',
+              note: '',
+              file_name: file.name,
+              mime,
+              size_bytes: blob.size,
+              sort: nextSort(d.documents),
+              url,
+              ...patch,
+            })
+          })
+        } catch (e) {
+          failures.push(`${file.name}: ${(e as Error).message}`)
+        }
+      }
+      if (failures.length) throw new Error(failures.join('\n'))
+    },
+    async setDocument(_s, id, patch) {
+      await mutate((d) => {
+        const row = d.documents.find((f) => f.id === id)
+        if (row) Object.assign(row, patch)
+      })
+    },
+    async removeDocument(_s, id) {
+      await mutate((d) => {
+        d.documents = d.documents.filter((f) => f.id !== id)
+      })
+    },
   }
 }
 
@@ -223,7 +270,7 @@ const str = (v: unknown): string => (v == null ? '' : String(v))
 /** The last sort in a list, so a new row lands at the end and never ties. */
 async function nextSortIn(
   db: ReturnType<AppSupabaseClient['schema']>,
-  table: 'curriculums' | 'work_samples',
+  table: 'curriculums' | 'work_samples' | 'documents',
   yearId: string,
 ): Promise<number> {
   const { data } = await db
@@ -284,18 +331,21 @@ function createSupabaseMonthlyRepo(sb: AppSupabaseClient): MonthlyRepo {
     async load(studentId) {
       const yearId = await ensureYear(studentId)
 
-      const [yearRes, subjectsRes, notesRes, curriculumsRes, samplesRes] = await Promise.all([
+      const [yearRes, subjectsRes, notesRes, curriculumsRes, samplesRes, documentsRes] =
+        await Promise.all([
         db.from('school_years').select('*').eq('id', yearId).single(),
         db.from('subjects').select('id, label, sort').eq('school_year_id', yearId).order('sort'),
         db.from('monthly_notes').select('*').eq('school_year_id', yearId),
         db.from('curriculums').select('*').eq('school_year_id', yearId).order('sort'),
         db.from('work_samples').select('*').eq('school_year_id', yearId).order('sort'),
+        db.from('documents').select('*').eq('school_year_id', yearId).order('sort'),
       ])
       fail(yearRes.error)
       fail(subjectsRes.error)
       fail(notesRes.error)
       fail(curriculumsRes.error)
       fail(samplesRes.error)
+      fail(documentsRes.error)
 
       const subjects = subjectsRes.data ?? []
       const ids = subjects.map((s) => s.id as string)
@@ -388,6 +438,27 @@ function createSupabaseMonthlyRepo(sb: AppSupabaseClient): MonthlyRepo {
         sort: Number(w.sort ?? 0),
         url: w.storage_path ? (signed.get(w.storage_path as string) ?? null) : null,
       }))
+
+      year.documents = await Promise.all(
+        (documentsRes.data ?? []).map(async (f) => ({
+          id: f.id as string,
+          title: str(f.title),
+          kind: str(f.kind) || 'Other',
+          document_date: str(f.document_date),
+          note: str(f.note),
+          file_name: str(f.file_name),
+          mime: (f.mime as string | null) ?? null,
+          size_bytes: (f.size_bytes as number | null) ?? null,
+          sort: Number(f.sort ?? 0),
+          url: f.storage_path
+            ? ((
+                await sb.storage
+                  .from(DOCUMENT_BUCKET)
+                  .createSignedUrl(f.storage_path as string, SIGNED_URL_TTL_SECONDS)
+              ).data?.signedUrl ?? null)
+            : null,
+        })),
+      )
 
       return year
     },
@@ -539,6 +610,55 @@ function createSupabaseMonthlyRepo(sb: AppSupabaseClient): MonthlyRepo {
       fail((await db.from('work_samples').delete().eq('id', id)).error)
       const path = found.data?.storage_path as string | null
       if (path) await sb.storage.from(SAMPLE_BUCKET).remove([path])
+    },
+
+    async addDocuments(studentId, files, patch) {
+      const yearId = await ensureYear(studentId)
+      const { data: userData } = await sb.auth.getUser()
+      const userId = userData.user?.id
+      if (!userId) throw new Error('Not signed in.')
+
+      let sort = await nextSortIn(db, 'documents', yearId)
+      const failures: string[] = []
+
+      for (const file of files) {
+        try {
+          const { blob, mime } = await prepareUpload(file)
+          const path = `${userId}/${yearId}/${crypto.randomUUID()}`
+          fail(
+            (await sb.storage.from(DOCUMENT_BUCKET).upload(path, blob, { contentType: mime }))
+              .error,
+          )
+
+          const inserted = await db.from('documents').insert({
+            school_year_id: yearId,
+            title: titleFromFile(file),
+            file_name: file.name,
+            storage_path: path,
+            mime,
+            size_bytes: blob.size,
+            sort: sort++,
+            ...patch,
+          })
+          if (inserted.error) {
+            await sb.storage.from(DOCUMENT_BUCKET).remove([path])
+            throw new Error(inserted.error.message)
+          }
+        } catch (e) {
+          failures.push(`${file.name}: ${(e as Error).message}`)
+        }
+      }
+
+      if (failures.length) throw new Error(failures.join('\n'))
+    },
+    async setDocument(_studentId, id, patch) {
+      fail((await db.from('documents').update(patch).eq('id', id)).error)
+    },
+    async removeDocument(_studentId, id) {
+      const found = await db.from('documents').select('storage_path').eq('id', id).maybeSingle()
+      fail((await db.from('documents').delete().eq('id', id)).error)
+      const path = found.data?.storage_path as string | null
+      if (path) await sb.storage.from(DOCUMENT_BUCKET).remove([path])
     },
   }
 }

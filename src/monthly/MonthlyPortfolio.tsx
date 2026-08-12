@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import { PdfPages } from '@/components/PdfPages'
 import { FilePlate, RemoveButton, ViewButton } from '@/components/ui'
+import { isPdf } from '@/lib/image'
 import type { Student } from '@/lib/types'
 import {
   CHECKLIST_RECOMMENDED,
   CHECKLIST_REQUIRED,
+  DOCUMENT_KINDS,
   MONTHS,
   WEEKDAYS,
   daysInMonth,
@@ -11,6 +14,7 @@ import {
   weekdayOf,
   useMonthlyYear,
   type MonthlyCurriculum,
+  type MonthlyDocument,
   type MonthlySample,
   type MonthlyYear,
 } from './store'
@@ -40,6 +44,9 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
     addSamples,
     setSample,
     removeSample,
+    addDocuments,
+    setDocument,
+    removeDocument,
     savedAt,
     dirty,
   } = useMonthlyYear(student.id)
@@ -52,6 +59,7 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
     ...MONTHS.map((m) => ({ key: m.key, label: m.label })),
     { key: 'curriculum', label: 'Curriculums used' },
     { key: 'samples', label: 'Work samples' },
+    { key: 'documents', label: 'Additional documents' },
   ]
 
   const month = MONTHS.find((m) => m.key === page)
@@ -82,7 +90,9 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
                 ? year.curriculums.length
                 : p.key === 'samples'
                   ? year.samples.length
-                  : 0
+                  : p.key === 'documents'
+                    ? year.documents.length
+                    : 0
             return (
               <button
                 key={p.key}
@@ -92,7 +102,10 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
                 onClick={() => setPage(p.key)}
               >
                 <span>{p.label}</span>
-                {(year.months[p.key] || p.key === 'curriculum' || p.key === 'samples') && (
+                {(year.months[p.key] ||
+                  p.key === 'curriculum' ||
+                  p.key === 'samples' ||
+                  p.key === 'documents') && (
                   <span className="section-count" data-filled={marks > 0}>
                     {marks}
                   </span>
@@ -157,6 +170,15 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
             add={addSamples}
             set={setSample}
             remove={removeSample}
+            busy={dirty}
+          />
+        )}
+        {page === 'documents' && (
+          <DocumentsPage
+            year={year}
+            add={addDocuments}
+            set={setDocument}
+            remove={removeDocument}
             busy={dirty}
           />
         )}
@@ -855,10 +877,15 @@ function SamplesPage({
                     mime={sample.mime}
                     title={sample.title || sample.file_name}
                   />
-                  <RemoveButton
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ fontSize: 11 }}
+                    aria-label={`Remove ${sample.title || sample.file_name}`}
                     onClick={() => remove(sample.id)}
-                    label={`Remove ${sample.title || sample.file_name}`}
-                  />
+                  >
+                    Remove
+                  </button>
                 </span>
               </figcaption>
             </figure>
@@ -866,6 +893,170 @@ function SamplesPage({
         </div>
       )}
 
+    </section>
+  )
+}
+
+/**
+ * The last sheet: everything the folder carries that is neither the log, the
+ * materials nor the child's work — the Letter of Intent, the evaluation, a
+ * medical letter.
+ *
+ * These print in full, page by page, rather than as a thumbnail with a note
+ * saying a file is attached. A portfolio that has to be produced on fifteen
+ * days' notice is worth nothing if the documents in it are only referenced.
+ */
+function DocumentsPage({
+  year,
+  add,
+  set,
+  remove,
+  busy,
+}: {
+  year: MonthlyYear
+  add: (files: File[]) => void
+  set: (id: string, patch: Partial<MonthlyDocument>) => void
+  remove: (id: string) => void
+  busy: boolean
+}) {
+  const [over, setOver] = useState(false)
+
+  const take = (list: FileList | null) => {
+    const files = Array.from(list ?? [])
+    if (files.length) add(files)
+  }
+
+  return (
+    <section className="sheet doc-sheet">
+      <div className="kicker">Additional Documents</div>
+      <h2 className="sheet-title" style={{ fontSize: 34, margin: '6px 0 0' }}>
+        Additional documents
+      </h2>
+      <p className="sheet-note" style={{ margin: '10px 0 16px', fontSize: 11 }}>
+        The Letter of Intent, the annual evaluation, immunization records, certificates — anything
+        else this portfolio has to carry. Each one prints in full at the back.
+      </p>
+
+      <label
+        className="drop-zone no-print"
+        data-over={over || undefined}
+        onDragOver={(e) => {
+          e.preventDefault()
+          setOver(true)
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          e.preventDefault()
+          setOver(false)
+          take(e.dataTransfer.files)
+        }}
+      >
+        <span style={{ fontSize: 13 }}>
+          {busy ? 'Uploading…' : 'Choose files or drop them here — several at once is fine'}
+        </span>
+        <input
+          type="file"
+          multiple
+          accept="image/*,application/pdf"
+          aria-label="Additional document files"
+          disabled={busy}
+          onChange={(e) => {
+            take(e.target.files)
+            e.target.value = ''
+          }}
+        />
+      </label>
+
+      {year.documents.length === 0 ? (
+        <p className="empty-state" style={{ marginTop: 16 }}>
+          Nothing attached yet.
+        </p>
+      ) : (
+        <div style={{ marginTop: 20 }}>
+          {year.documents.map((doc) => (
+            <article key={doc.id} className="document-block">
+              <div className="document-head">
+                <input
+                  className="cell-input"
+                  style={{ fontSize: 15 }}
+                  value={doc.title}
+                  placeholder="What this document is"
+                  aria-label={`Title for ${doc.file_name}`}
+                  onChange={(e) => set(doc.id, { title: e.target.value })}
+                />
+                <div className="no-print" style={{ display: 'flex', alignItems: 'center' }}>
+                  <ViewButton
+                    url={doc.url}
+                    mime={doc.mime}
+                    title={doc.title || doc.file_name}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ fontSize: 12 }}
+                    aria-label={`Remove ${doc.title || doc.file_name}`}
+                    onClick={() => remove(doc.id)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+
+              <div className="document-meta">
+                <label>
+                  <span className="rule-label">Type</span>
+                  <select
+                    className="cell-input"
+                    value={doc.kind}
+                    aria-label={`Type of ${doc.file_name}`}
+                    onChange={(e) => set(doc.id, { kind: e.target.value })}
+                  >
+                    {DOCUMENT_KINDS.map((kind) => (
+                      <option key={kind} value={kind}>
+                        {kind}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="rule-label">Date</span>
+                  <input
+                    className="cell-input"
+                    type="date"
+                    value={doc.document_date}
+                    aria-label={`Date of ${doc.file_name}`}
+                    onChange={(e) => set(doc.id, { document_date: e.target.value })}
+                  />
+                </label>
+                <label style={{ flex: 2 }}>
+                  <span className="rule-label">Note</span>
+                  <input
+                    className="cell-input"
+                    value={doc.note}
+                    placeholder="Anything a reader should know"
+                    aria-label={`Note on ${doc.file_name}`}
+                    onChange={(e) => set(doc.id, { note: e.target.value })}
+                  />
+                </label>
+              </div>
+
+              {isPdf(doc.mime) && doc.url ? (
+                <PdfPages url={doc.url} label={doc.title || doc.file_name} />
+              ) : (
+                <FilePlate
+                  url={doc.url}
+                  mime={doc.mime}
+                  title={doc.title || doc.file_name}
+                  height="260px"
+                  fit="contain"
+                  placeholder="the document"
+                />
+              )}
+              <div className="sample-meta">{doc.file_name}</div>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   )
 }

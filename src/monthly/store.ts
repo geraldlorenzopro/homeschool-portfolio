@@ -5,6 +5,7 @@ import { blankYear, type MonthlyYear } from './model'
 import {
   createMonthlyRepo,
   type CurriculumPatch,
+  type DocumentPatch,
   type MonthPatch,
   type SamplePatch,
   type YearPatch,
@@ -230,6 +231,30 @@ export function useMonthlyYear(studentId: string) {
     [repo, run, studentId],
   )
 
+  const addDocuments = useCallback(
+    (files: File[], patch?: DocumentPatch) =>
+      files.length ? run(() => repo.addDocuments(studentId, files, patch)) : undefined,
+    [repo, run, studentId],
+  )
+
+  const setDocument = useCallback(
+    (id: string, patch: DocumentPatch) =>
+      writeDebounced(
+        `document:${id}:${Object.keys(patch).join(',')}`,
+        (d) => {
+          const row = d.documents.find((f) => f.id === id)
+          if (row) Object.assign(row, patch)
+        },
+        () => repo.setDocument(studentId, id, patch),
+      ),
+    [repo, studentId, writeDebounced],
+  )
+
+  const removeDocument = useCallback(
+    (id: string) => run(() => repo.removeDocument(studentId, id)),
+    [repo, run, studentId],
+  )
+
   const setCoverPhoto = useMutation({
     mutationFn: (file: File) => repo.setCoverPhoto(studentId, file),
     onSuccess: () => {
@@ -254,6 +279,9 @@ export function useMonthlyYear(studentId: string) {
     addSamples,
     setSample,
     removeSample,
+    addDocuments,
+    setDocument,
+    removeDocument,
     savedAt,
     dirty: pending > 0,
   }
