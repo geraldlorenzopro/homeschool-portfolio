@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { RowActions } from '@/components/RowActions'
 import { useInlineEdit } from '@/components/useInlineEdit'
-import { EmptyState, Field, Plate } from '@/components/ui'
+import { EmptyState, Field, FilePreview, Plate } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { fileSizeLabel, fmtDate, today } from '@/lib/format'
 import { isImage, isPdf } from '@/lib/image'
@@ -118,6 +118,7 @@ export function SupportDocsSection({ rows }: { rows: SupportDocument[] }) {
               <span className="file-hint">
                 {file ? `${file.name}  ·  ${fileSizeLabel(file.size)}` : 'No file chosen yet'}
               </span>
+              <FilePreview file={file} />
             </>
           )}
         </Field>
@@ -148,6 +149,8 @@ export function SupportDocsSection({ rows }: { rows: SupportDocument[] }) {
                 <Plate
                   url={image ? row.url : null}
                   height="150px"
+                  alt={row.title}
+                  zoomable={Boolean(image)}
                   placeholder={isPdf(row.mime) ? 'PDF document attached' : 'document attached'}
                 />
                 {editing && edit.draft ? (

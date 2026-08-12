@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { DragHandle, RowActions } from '@/components/RowActions'
 import { useDragOrder } from '@/components/useDragOrder'
 import { useInlineEdit } from '@/components/useInlineEdit'
-import { EmptyState, Field } from '@/components/ui'
+import { EmptyState, Field, FilePreview } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { fileSizeLabel, fmtDate, today } from '@/lib/format'
 import { EVALUATION_KINDS, type Evaluation, type EvaluationKind } from '@/lib/types'
@@ -141,6 +141,7 @@ export function EvaluationsSection({ rows }: { rows: Evaluation[] }) {
               <span className="file-hint">
                 {file ? `${file.name}  ·  ${fileSizeLabel(file.size)}` : 'No file chosen yet'}
               </span>
+              <FilePreview file={file} />
             </>
           )}
         </Field>

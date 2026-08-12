@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 
 export function Field({
   label,
@@ -26,12 +26,12 @@ export function Field({
 export function PlaceholderBox({ label, height }: { label: string; height: string }) {
   return (
     <div
+      className="hatched"
       style={{
         height,
         display: 'flex',
         alignItems: 'flex-end',
         padding: '10px',
-        background: 'repeating-linear-gradient(135deg, #eae7e7 0 8px, #e0dcdc 8px 16px)',
         color: '#7d7979',
         fontFamily: 'ui-monospace, Menlo, monospace',
         fontSize: '10px',
@@ -44,18 +44,31 @@ export function PlaceholderBox({ label, height }: { label: string; height: strin
   )
 }
 
-/** Photographs are matted: a surface-coloured border with a hairline outline. */
+/**
+ * Photographs are matted: a surface-coloured border with a hairline outline.
+ *
+ * The picture is a real <img>, not a CSS background. Browsers drop background
+ * images when printing unless every ancestor opts in, which is why scans used
+ * to look right on screen and come out blank in the PDF.
+ */
 export function Plate({
   url,
   height,
   placeholder,
   fit = 'cover',
+  alt = '',
+  zoomable = false,
 }: {
   url: string | null
   height: string
   placeholder: string
   fit?: 'cover' | 'contain'
+  alt?: string
+  /** Click to open the full-size picture. Off inside the printed document. */
+  zoomable?: boolean
 }) {
+  const [zoomed, setZoomed] = useState(false)
+
   if (!url) {
     return (
       <div className="plate" style={{ padding: 0 }}>
@@ -63,27 +76,81 @@ export function Plate({
       </div>
     )
   }
+
   return (
-    <div
-      className="plate"
-      style={{
-        height,
-        backgroundImage: `url("${cssUrl(url)}")`,
-        backgroundSize: fit,
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'center',
-      }}
-    />
+    <>
+      <div
+        className="plate"
+        style={{ height, padding: 0, cursor: zoomable ? 'zoom-in' : undefined }}
+        onClick={zoomable ? () => setZoomed(true) : undefined}
+      >
+        <img
+          src={url}
+          alt={alt}
+          loading="lazy"
+          style={{ width: '100%', height: '100%', objectFit: fit, display: 'block' }}
+        />
+      </div>
+
+      {zoomed && (
+        <div
+          className="dialog-backdrop no-print"
+          role="dialog"
+          aria-modal="true"
+          aria-label={alt || 'Full size preview'}
+          style={{ cursor: 'zoom-out', zIndex: 40 }}
+          onClick={() => setZoomed(false)}
+        >
+          <img
+            src={url}
+            alt={alt}
+            style={{
+              maxWidth: '92vw',
+              maxHeight: '92vh',
+              objectFit: 'contain',
+              boxShadow: 'var(--shadow-lg)',
+              border: '8px solid var(--color-surface)',
+            }}
+          />
+        </div>
+      )}
+    </>
   )
 }
 
-/**
- * A URL goes into a CSS value, where React does no escaping. Quote it and drop
- * the characters that could close the url() — signed URLs and data URLs never
- * contain them, so nothing legitimate is lost.
- */
-function cssUrl(url: string): string {
-  return url.replace(/["'()\\\s]/g, encodeURIComponent)
+/** Thumbnail of a file the user has picked but not yet saved. */
+export function FilePreview({ file }: { file: File | null }) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [current, setCurrent] = useState<File | null>(null)
+
+  // Derive during render rather than in an effect: the object URL must exist
+  // on the same paint as the file that produced it.
+  if (file !== current) {
+    if (url) URL.revokeObjectURL(url)
+    setCurrent(file)
+    setUrl(file && file.type.startsWith('image/') ? URL.createObjectURL(file) : null)
+  }
+
+  if (!file) return null
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+      {url ? (
+        <div className="plate" style={{ width: 64, height: 64, padding: 0, flex: 'none' }}>
+          <img
+            src={url}
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        </div>
+      ) : (
+        <span className="tag tag-accent">{file.type.includes('pdf') ? 'PDF' : 'File'}</span>
+      )}
+      <span style={{ fontSize: 12, opacity: 0.7 }}>
+        {file.name} · {Math.round(file.size / 1024)} KB
+      </span>
+    </div>
+  )
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Field, Plate, RemoveButton } from '@/components/ui'
+import { Field, FilePreview, Plate, RemoveButton } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { fileSizeLabel, fmtDate } from '@/lib/format'
 import { isImage, isPdf } from '@/lib/image'
@@ -228,6 +228,7 @@ export function ProfileSection({
               <span className="file-hint">
                 {file ? `${file.name}  ·  ${fileSizeLabel(file.size)}` : 'No file chosen yet'}
               </span>
+              <FilePreview file={file} />
             </>
           )}
         </Field>
@@ -251,6 +252,8 @@ export function ProfileSection({
               <Plate
                 url={isImage(doc.mime) ? doc.url : null}
                 height="150px"
+                alt={doc.title}
+                zoomable={isImage(doc.mime)}
                 placeholder={isPdf(doc.mime) ? 'PDF document attached' : 'document attached'}
               />
               <figcaption style={{ fontSize: 13, lineHeight: 1.45 }}>

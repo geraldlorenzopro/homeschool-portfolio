@@ -18,9 +18,9 @@ test.describe('Uploads', () => {
     await expect(figure).toBeVisible()
     await expect(sectionCount(app, 'Work samples')).toHaveText('4')
 
-    // The image was downscaled to a JPEG data URL and matted in a .plate.
-    const plate = figure.locator('.plate')
-    await expect(plate).toHaveAttribute('style', /background-image: url\("data:image\/jpeg/)
+    // Downscaled to a JPEG and matted in a .plate — as a real <img>, so it
+    // survives printing.
+    await expect(figure.locator('.plate img')).toHaveAttribute('src', /^data:image\/jpeg/)
 
     await figure.getByRole('button', { name: 'Remove' }).click()
     await expect(figure).toHaveCount(0)
@@ -81,10 +81,7 @@ test.describe('Uploads', () => {
 
     const figure = app.locator('figure', { hasText: 'Therapist letter' })
     await expect(figure.locator('.tag')).toHaveText('Image')
-    await expect(figure.locator('.plate')).toHaveAttribute(
-      'style',
-      /background-image: url\("data:image\/jpeg/,
-    )
+    await expect(figure.locator('.plate img')).toHaveAttribute('src', /^data:image\/jpeg/)
   })
 
   test('a file that only claims to be a PDF is rejected', async ({ app }) => {

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DocPage, type PaperSize } from '@/components/DocPage'
+import { PdfPages } from '@/components/PdfPages'
 import { Plate } from '@/components/ui'
 import { areaLabel, fmtDate, sumHours } from '@/lib/format'
 import { isImage, isPdf } from '@/lib/image'
@@ -244,12 +245,24 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
                         fontSize: '10pt',
                         lineHeight: 1.6,
                         color: '#444141',
-                        margin: '8pt 0 0',
+                        margin: '8pt 0 10pt',
                       }}
                     >
                       {ev.summary}
                     </p>
                   )}
+                  {ev.url &&
+                    (isPdf(ev.mime) ? (
+                      <PdfPages url={ev.url} label={ev.title} />
+                    ) : (
+                      <Plate
+                        url={isImage(ev.mime) ? ev.url : null}
+                        height="190pt"
+                        fit="contain"
+                        alt={ev.title}
+                        placeholder="report filed with this portfolio"
+                      />
+                    ))}
                 </div>
               ))}
             </>
@@ -363,6 +376,8 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
                                   <Plate
                                     url={w.url}
                                     height="120pt"
+                                    fit="contain"
+                                    alt={w.title}
                                     placeholder="photo or scan of the work"
                                   />
                                   <figcaption
@@ -554,7 +569,13 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
                   .filter((w) => !w.goal_id)
                   .map((w) => (
                     <figure key={w.id} className="keep" style={{ margin: 0 }}>
-                      <Plate url={w.url} height="150pt" placeholder="photo or scan of the work" />
+                      <Plate
+                        url={w.url}
+                        height="150pt"
+                        fit="contain"
+                        alt={w.title}
+                        placeholder="photo or scan of the work"
+                      />
                       <figcaption
                         style={{ fontSize: '9.5pt', lineHeight: 1.45, marginTop: '6pt' }}
                       >
@@ -601,16 +622,21 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
                       {f.note}
                     </p>
                   )}
-                  <Plate
-                    url={isImage(f.mime) ? f.url : null}
-                    height="190pt"
-                    fit="contain"
-                    placeholder={
-                      isPdf(f.mime)
-                        ? 'PDF attached — filed with this portfolio'
-                        : 'document filed with this portfolio'
-                    }
-                  />
+                  {isPdf(f.mime) && f.url ? (
+                    <PdfPages url={f.url} label={f.title} />
+                  ) : (
+                    <Plate
+                      url={isImage(f.mime) ? f.url : null}
+                      height="190pt"
+                      fit="contain"
+                      alt={f.title}
+                      placeholder={
+                        isPdf(f.mime)
+                          ? 'PDF attached — filed with this portfolio'
+                          : 'document filed with this portfolio'
+                      }
+                    />
+                  )}
                 </div>
               ))}
             </>

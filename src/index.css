@@ -380,6 +380,39 @@ input[type='file'].input { padding: 6px; font-size: 12px; }
   .app-nav { flex-wrap: wrap; }
 }
 
+/* The slot where a file is missing. Its stripes are a background, so it needs
+   the same print opt-in the matting does. */
+.hatched {
+  background: repeating-linear-gradient(135deg, #eae7e7 0 8px, #e0dcdc 8px 16px);
+}
+
+/* Backgrounds and borders are dropped from printed output unless a page asks
+   for them explicitly. The plate's matting, its hairline and the hatched
+   placeholder are all information, not decoration. */
+.plate,
+.hatched,
+.doc {
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.pdf-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 10pt;
+}
+.pdf-pages canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  break-inside: avoid;
+}
+.pdf-note {
+  font-size: 9pt;
+  color: #605d5d;
+  margin: 0 0 6pt;
+}
+
 /* ── print: only the document survives ──────────────────────────────────── */
 
 @media print {

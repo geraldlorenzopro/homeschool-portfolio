@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { RowActions } from '@/components/RowActions'
 import { useDragOrder } from '@/components/useDragOrder'
 import { useInlineEdit } from '@/components/useInlineEdit'
-import { EmptyState, Field, Plate } from '@/components/ui'
+import { EmptyState, Field, FilePreview, Plate } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { areaLabel, fmtDate, shortGoal, today } from '@/lib/format'
 import type { Area, Goal, Student, WorkSample } from '@/lib/types'
@@ -148,6 +148,9 @@ export function WorkSamplesSection({
             />
           )}
         </Field>
+        <div className="span-all">
+          <FilePreview file={file} />
+        </div>
         <button
           type="button"
           className="btn btn-primary span-all justify-start"
@@ -170,7 +173,13 @@ export function WorkSamplesSection({
             const goal = goals.find((g) => g.id === row.goal_id)
             return (
               <figure key={row.id} className="figure" {...drag.handlers(row.id)}>
-                <Plate url={row.url} height="150px" placeholder="drop photo or scan" />
+                <Plate
+                  url={row.url}
+                  height="150px"
+                  placeholder="drop photo or scan"
+                  alt={row.title}
+                  zoomable
+                />
                 {editing && edit.draft ? (
                   <div className="edit-grid">
                     <input
