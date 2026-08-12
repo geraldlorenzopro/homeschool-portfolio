@@ -9,7 +9,72 @@ import {
   OUTCOME_LEVEL_LABEL,
   type Entry,
   type Portfolio,
+  type WorkSample,
 } from '@/lib/types'
+
+/**
+ * One session, wherever it sits in the document.
+ *
+ * A session filed under a goal and a session filed under none differ only in
+ * which table they land in — never in what they are worth showing. While these
+ * were two separate blocks of markup, the goal-less one silently printed
+ * neither the method, nor the hours, nor any photo attached to it, which is
+ * every session imported from a curriculum report.
+ */
+function SessionRow({
+  entry,
+  samples,
+  date,
+  showDates,
+  showHours,
+}: {
+  entry: Entry
+  samples: WorkSample[]
+  date: string
+  showDates: boolean
+  showHours: boolean
+}) {
+  return (
+    <tr className="keep">
+      {showDates && (
+        <td className="doc-td num nowrap" style={{ width: '68pt', color: '#605d5d' }}>
+          {date}
+        </td>
+      )}
+      <td className="doc-td" style={{ paddingRight: 0 }}>
+        <div>{entry.title}</div>
+        {entry.method && (
+          <div style={{ color: '#605d5d', fontSize: '9pt' }}>Method: {entry.method}</div>
+        )}
+        {entry.outcome && (
+          <div style={{ color: '#444141', fontSize: '9pt' }}>
+            Outcome: {entry.outcome}
+            {entry.outcome_level && ` (${OUTCOME_LEVEL_LABEL[entry.outcome_level]})`}
+          </div>
+        )}
+        {samples.map((w) => (
+          <div key={w.id} className="keep" style={{ maxWidth: '190pt', marginTop: '6pt' }}>
+            <Plate
+              url={w.url}
+              height="110pt"
+              fit="contain"
+              alt={w.title}
+              placeholder="photo of the work"
+            />
+          </div>
+        ))}
+      </td>
+      {showHours && (
+        <td
+          className="doc-td num"
+          style={{ width: '38pt', textAlign: 'right', color: '#605d5d', paddingRight: 0 }}
+        >
+          {entry.hours}
+        </td>
+      )}
+    </tr>
+  )
+}
 
 export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
   const [paper, setPaper] = useState<PaperSize>('letter')
@@ -319,61 +384,14 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
                             <table className="doc-table">
                               <tbody>
                                 {sessions.map((e) => (
-                                  <tr key={e.id} className="keep">
-                                    {showDates && (
-                                      <td
-                                        className="doc-td num nowrap"
-                                        style={{ width: '68pt', color: '#605d5d' }}
-                                      >
-                                        {entryDate(e)}
-                                      </td>
-                                    )}
-                                    <td className="doc-td" style={{ paddingRight: 0 }}>
-                                      <div>{e.title}</div>
-                                      {e.method && (
-                                        <div style={{ color: '#605d5d', fontSize: '9pt' }}>
-                                          Method: {e.method}
-                                        </div>
-                                      )}
-                                      {e.outcome && (
-                                        <div style={{ color: '#444141', fontSize: '9pt' }}>
-                                          Outcome: {e.outcome}
-                                          {e.outcome_level &&
-                                            ` (${OUTCOME_LEVEL_LABEL[e.outcome_level]})`}
-                                        </div>
-                                      )}
-                                      {workSamples
-                                        .filter((w) => w.entry_id === e.id)
-                                        .map((w) => (
-                                          <div
-                                            key={w.id}
-                                            className="keep"
-                                            style={{ maxWidth: '190pt', marginTop: '6pt' }}
-                                          >
-                                            <Plate
-                                              url={w.url}
-                                              height="110pt"
-                                              fit="contain"
-                                              alt={w.title}
-                                              placeholder="photo of the work"
-                                            />
-                                          </div>
-                                        ))}
-                                    </td>
-                                    {showHours && (
-                                      <td
-                                        className="doc-td num"
-                                        style={{
-                                          width: '38pt',
-                                          textAlign: 'right',
-                                          color: '#605d5d',
-                                          paddingRight: 0,
-                                        }}
-                                      >
-                                        {e.hours}
-                                      </td>
-                                    )}
-                                  </tr>
+                                  <SessionRow
+                                    key={e.id}
+                                    entry={e}
+                                    samples={workSamples.filter((w) => w.entry_id === e.id)}
+                                    date={entryDate(e)}
+                                    showDates={showDates}
+                                    showHours={showHours}
+                                  />
                                 ))}
                               </tbody>
                             </table>
@@ -412,7 +430,7 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
                     })}
 
                     {looseEntries.length > 0 && (
-                      <div className="keep" style={{ marginTop: '10pt' }}>
+                      <div style={{ marginTop: '10pt' }}>
                         <div
                           style={{
                             fontSize: '8.5pt',
@@ -427,24 +445,14 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
                         <table className="doc-table">
                           <tbody>
                             {looseEntries.map((e) => (
-                              <tr key={e.id} className="keep">
-                                {showDates && (
-                                  <td
-                                    className="doc-td num nowrap"
-                                    style={{ width: '68pt', color: '#605d5d' }}
-                                  >
-                                    {entryDate(e)}
-                                  </td>
-                                )}
-                                <td className="doc-td" style={{ paddingRight: 0 }}>
-                                  <div>{e.title}</div>
-                                  {e.outcome && (
-                                    <div style={{ color: '#605d5d', fontSize: '9pt' }}>
-                                      {e.outcome}
-                                    </div>
-                                  )}
-                                </td>
-                              </tr>
+                              <SessionRow
+                                key={e.id}
+                                entry={e}
+                                samples={workSamples.filter((w) => w.entry_id === e.id)}
+                                date={entryDate(e)}
+                                showDates={showDates}
+                                showHours={showHours}
+                              />
                             ))}
                           </tbody>
                         </table>
