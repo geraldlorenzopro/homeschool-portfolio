@@ -19,7 +19,18 @@ const PINK = {
 type PageKey = 'cover' | 'record' | 'child' | string
 
 export function MonthlyPortfolio({ student }: { student: Student }) {
-  const { year, update, setMonth, toggleDay, savedAt, dirty } = useMonthlyYear()
+  const {
+    year,
+    isLoading,
+    error,
+    updateYear,
+    setSubject,
+    setMonth,
+    toggleDay,
+    setCoverPhoto,
+    savedAt,
+    dirty,
+  } = useMonthlyYear(student.id)
   const [page, setPage] = useState<PageKey>('cover')
 
   const pages: { key: PageKey; label: string }[] = [
@@ -30,6 +41,13 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
   ]
 
   const month = MONTHS.find((m) => m.key === page)
+
+  if (error) {
+    return <p className="empty-state" style={{ padding: 40 }}>{error.message}</p>
+  }
+  if (isLoading) {
+    return <p className="empty-state" style={{ padding: 40 }}>Opening the year…</p>
+  }
 
   return (
     <div className="panel-grid">
@@ -104,16 +122,16 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
       </aside>
 
       <main className="panel-main" style={{ maxWidth: 'none' }}>
-        {page === 'cover' && <Cover year={year} student={student} update={update} />}
-        {page === 'record' && <RecordPage year={year} student={student} update={update} />}
-        {page === 'child' && <ChildInfo year={year} student={student} update={update} />}
+        {page === 'cover' && <Cover year={year} student={student} update={updateYear} setCoverPhoto={setCoverPhoto} />}
+        {page === 'record' && <RecordPage year={year} student={student} update={updateYear} />}
+        {page === 'child' && <ChildInfo year={year} student={student} update={updateYear} />}
         {month && (
           <MonthLog
             key={month.key}
             year={year}
             student={student}
             month={month}
-            update={update}
+            setSubject={setSubject}
             setMonth={setMonth}
             toggleDay={toggleDay}
           />
@@ -123,7 +141,7 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
   )
 }
 
-type Update = (fn: (draft: MonthlyYear) => void) => void
+type Update = (patch: Partial<MonthlyYear>, immediate?: boolean) => void
 
 /** Underlined field, the way every input in this document is drawn. */
 function Rule({
@@ -167,10 +185,12 @@ function Cover({
   year,
   student,
   update,
+  setCoverPhoto,
 }: {
   year: MonthlyYear
   student: Student
   update: Update
+  setCoverPhoto: (file: File) => void
 }) {
   return (
     <section className="sheet cover-sheet">
@@ -207,13 +227,7 @@ function Cover({
                 accept="image/*"
                 onChange={(e) => {
                   const file = e.target.files?.[0]
-                  if (!file) return
-                  const reader = new FileReader()
-                  reader.onload = () =>
-                    update((d) => {
-                      d.cover_photo = reader.result as string
-                    })
-                  reader.readAsDataURL(file)
+                  if (file) setCoverPhoto(file)
                 }}
               />
             </label>
@@ -232,7 +246,7 @@ function Cover({
             <Rule
               label="Parent"
               value={year.parent_name}
-              onChange={(v) => update((d) => (d.parent_name = v))}
+              onChange={(v) => update({ parent_name: v })}
               size={16}
               pink
             />
@@ -250,7 +264,7 @@ function Cover({
             <textarea
               aria-label="This book belongs to me — my drawings and words"
               value={year.belongs_to_me}
-              onChange={(e) => update((d) => (d.belongs_to_me = e.target.value))}
+              onChange={(e) => update({ belongs_to_me: e.target.value })}
             />
           </div>
         </div>
@@ -272,7 +286,7 @@ function RecordPage({
     <input
       type="checkbox"
       checked={Boolean(year.checklist[key])}
-      onChange={(e) => update((d) => (d.checklist[key] = e.target.checked))}
+      onChange={(e) => update({ checklist: { ...year.checklist, [key]: e.target.checked } }, true)}
     />
   )
 
@@ -290,14 +304,14 @@ function RecordPage({
         <Rule
           label="From"
           value={year.from_date}
-          onChange={(v) => update((d) => (d.from_date = v))}
+          onChange={(v) => update({ from_date: v })}
           size={15}
           tabular
         />
         <Rule
           label="To"
           value={year.to_date}
-          onChange={(v) => update((d) => (d.to_date = v))}
+          onChange={(v) => update({ to_date: v })}
           size={15}
           tabular
         />
@@ -371,7 +385,7 @@ function ChildInfo({
           <Rule
             label="Date of the Letter of Intent"
             value={year.letter_of_intent_date}
-            onChange={(v) => update((d) => (d.letter_of_intent_date = v))}
+            onChange={(v) => update({ letter_of_intent_date: v })}
             placeholder="MM / DD / YYYY"
             tabular
           />
@@ -387,12 +401,12 @@ function ChildInfo({
         <Rule
           label="Parent’s name"
           value={year.parent_name}
-          onChange={(v) => update((d) => (d.parent_name = v))}
+          onChange={(v) => update({ parent_name: v })}
         />
         <Rule
           label="Address"
           value={year.address}
-          onChange={(v) => update((d) => (d.address = v))}
+          onChange={(v) => update({ address: v })}
           placeholder="Street address"
         />
 
@@ -401,7 +415,7 @@ function ChildInfo({
             <Rule
               label="City"
               value={year.city}
-              onChange={(v) => update((d) => (d.city = v))}
+              onChange={(v) => update({ city: v })}
               placeholder="City"
             />
           </div>
@@ -410,7 +424,7 @@ function ChildInfo({
             <Rule
               label="ZIP"
               value={year.zip}
-              onChange={(v) => update((d) => (d.zip = v))}
+              onChange={(v) => update({ zip: v })}
               placeholder="ZIP"
               tabular
             />
@@ -430,7 +444,7 @@ function ChildInfo({
           aria-label="Notes anyone reading this record should know"
           style={{ minHeight: '2.6in' }}
           value={year.notes}
-          onChange={(e) => update((d) => (d.notes = e.target.value))}
+          onChange={(e) => update({ notes: e.target.value })}
         />
       </div>
     </section>
@@ -441,15 +455,15 @@ function MonthLog({
   year,
   student,
   month,
-  update,
+  setSubject,
   setMonth,
   toggleDay,
 }: {
   year: MonthlyYear
   student: Student
   month: (typeof MONTHS)[number]
-  update: Update
-  setMonth: (key: string, fn: (m: MonthlyYear['months'][string]) => void) => void
+  setSubject: (index: number, label: string) => void
+  setMonth: (key: string, patch: Partial<MonthlyYear['months'][string]>) => void
   toggleDay: (key: string, subject: number, day: number) => void
 }) {
   const record = year.months[month.key]
@@ -474,7 +488,7 @@ function MonthLog({
           <Rule
             label="Hours or notes"
             value={record.hours_notes}
-            onChange={(v) => setMonth(month.key, (m) => (m.hours_notes = v))}
+            onChange={(v) => setMonth(month.key, { hours_notes: v })}
             size={13}
           />
         </div>
@@ -506,11 +520,7 @@ function MonthLog({
                   value={label}
                   placeholder="Other subject"
                   aria-label={`Name of subject row ${index + 1}`}
-                  onChange={(e) =>
-                    update((d) => {
-                      d.subjects[index] = e.target.value
-                    })
-                  }
+                  onChange={(e) => setSubject(index, e.target.value)}
                 />
               )}
             </div>
@@ -541,7 +551,7 @@ function MonthLog({
           aria-label="Titles of Reading Materials"
           style={{ minHeight: '1.5in', marginTop: 6 }}
           value={record.reading_materials}
-          onChange={(e) => setMonth(month.key, (m) => (m.reading_materials = e.target.value))}
+          onChange={(e) => setMonth(month.key, { reading_materials: e.target.value })}
         />
       </div>
 
@@ -553,7 +563,7 @@ function MonthLog({
             aria-label="Field trips, special events and educational activities"
             style={{ minHeight: '1.5in', marginTop: 6 }}
             value={record.field_trips}
-            onChange={(e) => setMonth(month.key, (m) => (m.field_trips = e.target.value))}
+            onChange={(e) => setMonth(month.key, { field_trips: e.target.value })}
           />
         </div>
         <div>
@@ -563,7 +573,7 @@ function MonthLog({
             aria-label="Accomplishments this month"
             style={{ minHeight: '1.5in', marginTop: 6 }}
             value={record.accomplishments}
-            onChange={(e) => setMonth(month.key, (m) => (m.accomplishments = e.target.value))}
+            onChange={(e) => setMonth(month.key, { accomplishments: e.target.value })}
           />
         </div>
       </div>
