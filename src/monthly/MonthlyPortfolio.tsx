@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { PdfPages } from '@/components/PdfPages'
+import { CoverBorder } from './CoverBorder'
 import { FilePlate, RemoveButton, ViewButton } from '@/components/ui'
 import { isPdf } from '@/lib/image'
 import type { Student } from '@/lib/types'
@@ -251,6 +252,7 @@ function Cover({
 }) {
   return (
     <section className="sheet cover-sheet">
+      <CoverBorder />
       <div className="cover-frame">
         <div className="cover-inner">
           <div className="cover-kicker">
