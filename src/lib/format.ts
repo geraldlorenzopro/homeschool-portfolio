@@ -8,8 +8,14 @@ export function fmtDate(iso: string | null | undefined): string {
   return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+/**
+ * Local, not UTC. Florida is five hours behind it, so an entry logged at nine
+ * on a Tuesday evening was being dated Wednesday — in a log whose whole legal
+ * point is that it was kept at the time of the instruction.
+ */
 export function today(): string {
-  return new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10)
 }
 
 export function areaLabel(areaId: string | null, areas: Area[]): string {
