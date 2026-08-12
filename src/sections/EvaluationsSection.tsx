@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { DragHandle, RowActions } from '@/components/RowActions'
 import { useDragOrder } from '@/components/useDragOrder'
 import { useInlineEdit } from '@/components/useInlineEdit'
-import { EmptyState, Field, FilePreview } from '@/components/ui'
+import { EmptyState, Field, FilePreview, ViewButton } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { fileSizeLabel, fmtDate, today } from '@/lib/format'
 import { EVALUATION_KINDS, type Evaluation, type EvaluationKind } from '@/lib/types'
@@ -207,17 +207,7 @@ export function EvaluationsSection({ rows }: { rows: Evaluation[] }) {
                         <div>{row.title}</div>
                         {row.performed_by && <div className="row-sub">{row.performed_by}</div>}
                         {row.summary && <div className="row-sub">{row.summary}</div>}
-                        {row.url && (
-                          <a
-                            className="btn btn-ghost"
-                            style={{ fontSize: 12, paddingLeft: 0 }}
-                            href={row.url}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Open file
-                          </a>
-                        )}
+                        <ViewButton url={row.url} mime={row.mime} title={row.title} />
                       </>
                     )}
                   </td>

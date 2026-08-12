@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { RowActions } from '@/components/RowActions'
 import { useDragOrder } from '@/components/useDragOrder'
 import { useInlineEdit } from '@/components/useInlineEdit'
-import { EmptyState, Field, FilePreview, Plate } from '@/components/ui'
+import { EmptyState, Field, FilePreview, Plate, ViewButton } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { areaLabel, fmtDate, shortGoal, today } from '@/lib/format'
 import type { Area, Goal, Student, WorkSample } from '@/lib/types'
@@ -11,6 +11,7 @@ interface Draft {
   title: string
   area_id: string | null
   goal_id: string | null
+  entry_id: string | null
   date: string
 }
 
@@ -18,6 +19,7 @@ const blank = (areaId: string | null): Draft => ({
   title: '',
   area_id: areaId,
   goal_id: null,
+  entry_id: null,
   date: today(),
 })
 
@@ -236,7 +238,9 @@ export function WorkSamplesSection({
                     )}
                   </figcaption>
                 )}
-                <RowActions
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <ViewButton url={row.url} mime={row.mime} title={row.title} />
+                  <RowActions
                   editing={editing}
                   onEdit={() => edit.start(row)}
                   onSave={() => {
@@ -249,7 +253,8 @@ export function WorkSamplesSection({
                       ? `Remove “${row.title}” and delete the uploaded photo?`
                       : undefined
                   }
-                />
+                  />
+                </div>
               </figure>
             )
           })}

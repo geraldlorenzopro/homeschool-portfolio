@@ -228,12 +228,13 @@ export function SectionPanel({ portfolio }: { portfolio: Portfolio }) {
                 area={area}
                 goals={goals}
                 entries={entries}
+                workSamples={workSamples}
               />
             ) : null
           })()}
         {section === 'evaluations' && <EvaluationsSection rows={evaluations} />}
-        {section === 'curriculum' && <CurriculumSection rows={curriculums} areas={areas} />}
-        {section === 'books' && <ReadingListSection rows={books} student={student} />}
+        {section === 'curriculum' && <CurriculumSection rows={curriculums} areas={areas} attachments={attachments} />}
+        {section === 'books' && <ReadingListSection rows={books} student={student} attachments={attachments} />}
         {section === 'samples' && (
           <WorkSamplesSection
             rows={workSamples}

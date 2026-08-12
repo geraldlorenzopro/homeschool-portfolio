@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { RowActions } from '@/components/RowActions'
 import { useInlineEdit } from '@/components/useInlineEdit'
-import { EmptyState, Field, FilePreview, Plate } from '@/components/ui'
+import { EmptyState, Field, FilePreview, Plate, ViewButton } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { fileSizeLabel, fmtDate, today } from '@/lib/format'
 import { isImage, isPdf } from '@/lib/image'
@@ -203,18 +203,8 @@ export function SupportDocsSection({ rows }: { rows: SupportDocument[] }) {
                     <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>{row.note}</div>
                   </figcaption>
                 )}
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  {!editing && row.url && (
-                    <a
-                      className="btn btn-ghost"
-                      style={{ fontSize: 12 }}
-                      href={row.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open
-                    </a>
-                  )}
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  {!editing && <ViewButton url={row.url} mime={row.mime} title={row.title} />}
                   <RowActions
                     editing={editing}
                     onEdit={() => edit.start(row)}

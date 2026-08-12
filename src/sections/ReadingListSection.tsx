@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { DragHandle, RowActions } from '@/components/RowActions'
 import { useDragOrder } from '@/components/useDragOrder'
 import { useInlineEdit } from '@/components/useInlineEdit'
+import { RowFiles, filesFor } from '@/components/RowFiles'
 import { EmptyState, Field } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { fmtDate, today } from '@/lib/format'
-import type { Book, Student } from '@/lib/types'
+import type { Attachment, Book, Student } from '@/lib/types'
 
 interface Draft {
   title: string
@@ -21,7 +22,15 @@ const blank = (): Draft => ({
   how_read: 'Read aloud together',
 })
 
-export function ReadingListSection({ rows, student }: { rows: Book[]; student: Student }) {
+export function ReadingListSection({
+  rows,
+  student,
+  attachments,
+}: {
+  rows: Book[]
+  student: Student
+  attachments: Attachment[]
+}) {
   const [form, setForm] = useState<Draft>(blank)
   const edit = useInlineEdit<Book>()
 
@@ -35,6 +44,10 @@ export function ReadingListSection({ rows, student }: { rows: Book[]; student: S
     }),
   )
   const remove = useAction<string>((repo, id) => repo.remove('books', id))
+  const addFile = useAction<{ ownerId: string; title: string; file: File }>((repo, a) =>
+    repo.add('attachments', { owner_type: 'book', owner_id: a.ownerId, title: a.title }, a.file),
+  )
+  const removeFile = useAction<string>((repo, id) => repo.remove('attachments', id))
   const reorder = useAction<string[]>((repo, ids) => repo.reorder('books', ids))
 
   const drag = useDragOrder(
@@ -143,7 +156,18 @@ export function ReadingListSection({ rows, student }: { rows: Book[]; student: S
                         aria-label="Title"
                       />
                     ) : (
-                      row.title
+                      <>
+                        {row.title}
+                        <RowFiles
+                          files={filesFor(attachments, 'book', row.id)}
+                          onAdd={(f) =>
+                            addFile.mutate({ ownerId: row.id, title: f.name, file: f })
+                          }
+                          onRemove={(id) => removeFile.mutate(id)}
+                          pending={addFile.isPending}
+                          label="page"
+                        />
+                      </>
                     )}
                   </td>
                   <td style={{ opacity: 0.75 }}>

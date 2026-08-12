@@ -222,16 +222,21 @@ export function createSupabaseRepo(sb: AppSupabaseClient, userId: string): Repo 
         .select('id', { count: 'exact', head: true })
         .eq('student_id', studentId)
 
-      const { error } = await sb.from(TABLE[collection]).insert({
-        student_id: studentId,
-        sort: (count ?? 0) + 1,
-        ...forDatabase(input as Record<string, unknown>),
-        ...(uploaded ?? {}),
-      })
+      const { data, error } = await sb
+        .from(TABLE[collection])
+        .insert({
+          student_id: studentId,
+          sort: (count ?? 0) + 1,
+          ...forDatabase(input as Record<string, unknown>),
+          ...(uploaded ?? {}),
+        })
+        .select('id')
+        .single()
       if (error && uploaded && bucket) {
         await sb.storage.from(bucket).remove([uploaded.storage_path])
       }
       fail(error)
+      return data!.id as string
     },
 
     async update<K extends CollectionKey>(
@@ -263,6 +268,19 @@ export function createSupabaseRepo(sb: AppSupabaseClient, userId: string): Repo 
     },
 
     async remove<K extends CollectionKey>(collection: K, id: string) {
+      // Files filed against this row have no meaning without it.
+      if (collection !== 'attachments') {
+        const orphans = await sb
+          .from(TABLE.attachments)
+          .select('storage_path')
+          .eq('owner_id', id)
+        const paths = (orphans.data ?? [])
+          .map((r) => r.storage_path as string | null)
+          .filter((p): p is string => Boolean(p))
+        if (paths.length) await sb.storage.from(BUCKET.attachments!).remove(paths)
+        await sb.from(TABLE.attachments).delete().eq('owner_id', id)
+      }
+
       const bucket = BUCKET[collection]
       let path: string | null = null
       if (bucket) {

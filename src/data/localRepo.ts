@@ -73,11 +73,13 @@ export function createLocalRepo(): Repo {
 
     async add<K extends CollectionKey>(collection: K, input: NewRow<K>, file?: File | null) {
       const stored = file && BUCKET[collection] ? await store(file) : null
+      const id = uid()
       await mutate((d) => {
         const rows = list(d, collection)
         const sort = rows.reduce((n, r) => Math.max(n, r.sort ?? 0), 0) + 1
-        rows.push({ id: uid(), sort, ...(input as object), ...(stored ?? {}) } as AnyRow)
+        rows.push({ id, sort, ...(input as object), ...(stored ?? {}) } as AnyRow)
       })
+      return id
     },
 
     async update<K extends CollectionKey>(
@@ -109,6 +111,14 @@ export function createLocalRepo(): Repo {
           d.goals = d.goals.filter((g) => g.area_id !== id)
           d.entries = d.entries.filter((e) => e.area_id !== id)
         }
+        // A removed session releases its samples rather than taking them.
+        if (collection === 'entries') {
+          for (const sample of d.workSamples) {
+            if (sample.entry_id === id) sample.entry_id = null
+          }
+        }
+        // And anything filed against a removed row goes with it.
+        d.attachments = d.attachments.filter((a) => a.owner_id !== id)
       })
     },
 

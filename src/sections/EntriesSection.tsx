@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { DragHandle, RowActions } from '@/components/RowActions'
 import { useDragOrder } from '@/components/useDragOrder'
 import { useInlineEdit } from '@/components/useInlineEdit'
-import { EmptyState, Field } from '@/components/ui'
+import { EmptyState, Field, FilePreview, Plate, ViewButton } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { fmtDate, shortGoal, today } from '@/lib/format'
 import {
@@ -13,6 +13,7 @@ import {
   type Goal,
   type OutcomeLevel,
   type Student,
+  type WorkSample,
 } from '@/lib/types'
 
 interface Draft {
@@ -42,17 +43,52 @@ export function EntriesSection({
   area,
   goals,
   entries,
+  workSamples,
 }: {
   student: Student
   /** The one area this section records. */
   area: Area
   goals: Goal[]
   entries: Entry[]
+  workSamples: WorkSample[]
 }) {
   const [form, setForm] = useState<Draft>(() => blank(area.id))
+  const [file, setFile] = useState<File | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
   const edit = useInlineEdit<Entry>()
 
-  const add = useAction<Draft>((repo, input) => repo.add('entries', input))
+  // A photo taken during a session becomes a proper work sample — Florida asks
+  // for "samples of work" as its own section, so it cannot hide inside a log
+  // row. It just arrives already filed against this session, area and goal.
+  const add = useAction<{ input: Draft; file: File | null }>(async (repo, a) => {
+    const entryId = await repo.add('entries', a.input)
+    if (a.file) {
+      await repo.add(
+        'workSamples',
+        {
+          title: a.input.title,
+          area_id: a.input.area_id,
+          goal_id: a.input.goal_id,
+          entry_id: entryId,
+          date: a.input.date,
+        },
+        a.file,
+      )
+    }
+  })
+  const addSample = useAction<{ entry: Entry; file: File }>((repo, a) =>
+    repo.add(
+      'workSamples',
+      {
+        title: a.entry.title,
+        area_id: a.entry.area_id,
+        goal_id: a.entry.goal_id,
+        entry_id: a.entry.id,
+        date: a.entry.date,
+      },
+      a.file,
+    ),
+  )
   const save = useAction<Entry>((repo, row) =>
     repo.update('entries', row.id, {
       area_id: row.area_id,
@@ -84,9 +120,13 @@ export function EntriesSection({
     if (!form.title.trim() || !areaId) return
     // Area, goal and date stay put: a day's work usually shares all three.
     add.mutate(
-      { ...form, area_id: areaId, goal_id: goalId },
+      { input: { ...form, area_id: areaId, goal_id: goalId }, file },
       {
-        onSuccess: () => setForm({ ...blank(areaId), goal_id: goalId, date: form.date }),
+        onSuccess: () => {
+          setForm({ ...blank(areaId), goal_id: goalId, date: form.date })
+          setFile(null)
+          if (fileInput.current) fileInput.current.value = ''
+        },
       },
     )
   }
@@ -200,13 +240,29 @@ export function EntriesSection({
           </Field>
         )}
 
+        <Field label="Photo or scan of the work" span>
+          {(id) => (
+            <input
+              id={id}
+              ref={fileInput}
+              className="input"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+          )}
+        </Field>
+        <div className="span-all">
+          <FilePreview file={file} />
+        </div>
+
         <button
           type="button"
           className="btn btn-primary span-all justify-start"
           onClick={submit}
-          disabled={!form.title.trim()}
+          disabled={add.isPending || !form.title.trim()}
         >
-          Add entry
+          {add.isPending ? 'Adding…' : 'Add entry'}
         </button>
       </div>
 
@@ -319,6 +375,11 @@ export function EntriesSection({
                             )}
                           </div>
                         )}
+                        <SessionSamples
+                          samples={workSamples.filter((w) => w.entry_id === entry.id)}
+                          onAdd={(f) => addSample.mutate({ entry, file: f })}
+                          pending={addSample.isPending}
+                        />
                       </>
                     )}
                   </td>
@@ -358,6 +419,58 @@ export function EntriesSection({
           </tbody>
         </table>
       )}
+    </div>
+  )
+}
+
+/** The photographs taken during one session, and a way to add another. */
+function SessionSamples({
+  samples,
+  onAdd,
+  pending,
+}: {
+  samples: WorkSample[]
+  onAdd: (file: File) => void
+  pending: boolean
+}) {
+  const input = useRef<HTMLInputElement>(null)
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+      {samples.map((sample) => (
+        <span key={sample.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+          <span style={{ width: 40, height: 40, display: 'inline-block' }}>
+            <Plate
+              url={sample.url}
+              height="40px"
+              alt={sample.title}
+              zoomable
+              placeholder="no photo"
+            />
+          </span>
+          <ViewButton url={sample.url} mime={sample.mime} title={sample.title} />
+        </span>
+      ))}
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const picked = e.target.files?.[0]
+          if (picked) onAdd(picked)
+          e.target.value = ''
+        }}
+      />
+      <button
+        type="button"
+        className="btn btn-ghost"
+        style={{ fontSize: 12 }}
+        onClick={() => input.current?.click()}
+        disabled={pending}
+      >
+        {pending ? 'Uploading…' : samples.length ? '+ Add another photo' : '+ Add photo'}
+      </button>
     </div>
   )
 }

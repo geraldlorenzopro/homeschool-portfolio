@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Field, FilePreview, Plate, RemoveButton } from '@/components/ui'
+import { Field, FilePreview, Plate, RemoveButton, ViewButton } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { fileSizeLabel, fmtDate } from '@/lib/format'
 import { isImage, isPdf } from '@/lib/image'
@@ -262,18 +262,8 @@ export function ProfileSection({
                   {[doc.file_name, fileSizeLabel(doc.size_bytes)].filter(Boolean).join('  ·  ')}
                 </div>
               </figcaption>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {doc.url && (
-                  <a
-                    className="btn btn-ghost"
-                    style={{ fontSize: 12 }}
-                    href={doc.url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open
-                  </a>
-                )}
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <ViewButton url={doc.url} mime={doc.mime} title={doc.title} />
                 <RemoveButton
                   onClick={() => {
                     if (window.confirm(`Remove “${doc.title}” and delete the uploaded file?`)) {

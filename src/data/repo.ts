@@ -90,11 +90,12 @@ export interface Repo {
   getPortfolio(): Promise<Portfolio>
   updateStudent(patch: Partial<Omit<Student, 'id'>>): Promise<void>
 
+  /** Returns the id of the new row, so a file can be hung off it. */
   add<K extends CollectionKey>(
     collection: K,
     input: NewRow<K>,
     file?: File | null,
-  ): Promise<void>
+  ): Promise<string>
 
   update<K extends CollectionKey>(
     collection: K,

@@ -127,6 +127,8 @@ export interface WorkSample {
   title: string
   area_id: string | null
   goal_id: string | null
+  /** Set when the photo was uploaded from inside a session. */
+  entry_id: string | null
   date: string
   storage_path: string | null
   mime: string | null

@@ -294,7 +294,7 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
 
                     {areaGoals.map((goal) => {
                       const sessions = entries.filter((e) => e.goal_id === goal.id)
-                      const evidence = workSamples.filter((w) => w.goal_id === goal.id)
+                      const evidence = workSamples.filter((w) => w.goal_id === goal.id && !w.entry_id)
                       return (
                         <div key={goal.id} className="keep" style={{ margin: '12pt 0 16pt' }}>
                           <div style={{ fontSize: '10.5pt', lineHeight: 1.5 }}>{goal.text}</div>
@@ -342,6 +342,23 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
                                             ` (${OUTCOME_LEVEL_LABEL[e.outcome_level]})`}
                                         </div>
                                       )}
+                                      {workSamples
+                                        .filter((w) => w.entry_id === e.id)
+                                        .map((w) => (
+                                          <div
+                                            key={w.id}
+                                            className="keep"
+                                            style={{ maxWidth: '190pt', marginTop: '6pt' }}
+                                          >
+                                            <Plate
+                                              url={w.url}
+                                              height="110pt"
+                                              fit="contain"
+                                              alt={w.title}
+                                              placeholder="photo of the work"
+                                            />
+                                          </div>
+                                        ))}
                                     </td>
                                     {showHours && (
                                       <td
@@ -559,14 +576,14 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
           )}
 
           {/* ── work samples not already shown beside a goal ───────────── */}
-          {workSamples.some((w) => !w.goal_id) && (
+          {workSamples.some((w) => !w.goal_id && !w.entry_id) && (
             <>
               <h2 className="break-page" style={{ margin: '30pt 0 6pt' }}>
                 Samples of work
               </h2>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20pt' }}>
                 {workSamples
-                  .filter((w) => !w.goal_id)
+                  .filter((w) => !w.goal_id && !w.entry_id)
                   .map((w) => (
                     <figure key={w.id} className="keep" style={{ margin: 0 }}>
                       <Plate

@@ -59,7 +59,7 @@ test.describe('Uploads', () => {
     await expect(figure).toContainText('Sep 1, 2025')
     await expect(figure).toContainText('plan.pdf')
     await expect(figure).toContainText('PDF document attached')
-    await expect(figure.getByRole('link', { name: 'Open' })).toBeVisible()
+    await expect(figure.getByRole('link', { name: /^View / })).toBeVisible()
     await expect(sectionCount(app, 'Support documents (IEP)')).toHaveText('2')
 
     // The picker resets so the next document does not inherit this file.

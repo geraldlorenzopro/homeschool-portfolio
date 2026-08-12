@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { DragHandle, RowActions } from '@/components/RowActions'
 import { useDragOrder } from '@/components/useDragOrder'
 import { useInlineEdit } from '@/components/useInlineEdit'
+import { RowFiles, filesFor } from '@/components/RowFiles'
 import { EmptyState, Field } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { areaLabel } from '@/lib/format'
-import type { Area, Curriculum } from '@/lib/types'
+import type { Area, Attachment, Curriculum } from '@/lib/types'
 
 interface Draft {
   title: string
@@ -16,7 +17,15 @@ interface Draft {
 
 const blank = (): Draft => ({ title: '', publisher: '', area_id: null, usage: '' })
 
-export function CurriculumSection({ rows, areas }: { rows: Curriculum[]; areas: Area[] }) {
+export function CurriculumSection({
+  rows,
+  areas,
+  attachments,
+}: {
+  rows: Curriculum[]
+  areas: Area[]
+  attachments: Attachment[]
+}) {
   const [form, setForm] = useState<Draft>(blank)
   const edit = useInlineEdit<Curriculum>()
 
@@ -30,6 +39,10 @@ export function CurriculumSection({ rows, areas }: { rows: Curriculum[]; areas: 
     }),
   )
   const remove = useAction<string>((repo, id) => repo.remove('curriculums', id))
+  const addFile = useAction<{ ownerId: string; title: string; file: File }>((repo, a) =>
+    repo.add('attachments', { owner_type: 'curriculum', owner_id: a.ownerId, title: a.title }, a.file),
+  )
+  const removeFile = useAction<string>((repo, id) => repo.remove('attachments', id))
   const reorder = useAction<string[]>((repo, ids) => repo.reorder('curriculums', ids))
 
   const drag = useDragOrder(
@@ -161,6 +174,15 @@ export function CurriculumSection({ rows, areas }: { rows: Curriculum[]; areas: 
                       <>
                         <div>{row.title}</div>
                         {row.usage && <div className="row-sub">{row.usage}</div>}
+                        <RowFiles
+                          files={filesFor(attachments, 'curriculum', row.id)}
+                          onAdd={(f) =>
+                            addFile.mutate({ ownerId: row.id, title: f.name, file: f })
+                          }
+                          onRemove={(id) => removeFile.mutate(id)}
+                          pending={addFile.isPending}
+                          label="document"
+                        />
                       </>
                     )}
                   </td>

@@ -401,30 +401,31 @@ export function QuickLog({ portfolio }: { portfolio: Portfolio }) {
 }
 
 /** Both flows write the same tables — this is the only place they diverge. */
-function fileEntry(repo: Repo, kind: Kind, form: Draft, file: File | null): Promise<void> {
+async function fileEntry(repo: Repo, kind: Kind, form: Draft, file: File | null): Promise<void> {
   if (kind === 'book') {
-    return repo.add('books', {
+    await repo.add('books', {
       title: form.title,
       author: form.author,
       finished_on: form.date,
       how_read: form.method || 'Read aloud together',
     })
+    return
   }
   if (kind === 'sample') {
-    return repo.add(
+    await repo.add(
       'workSamples',
       {
         title: form.title,
         area_id: form.area_id || null,
         goal_id: form.goal_id,
+        entry_id: null,
         date: form.date,
-        storage_path: null,
-        mime: null,
       },
       file,
     )
+    return
   }
-  return repo.add('entries', {
+  await repo.add('entries', {
     area_id: form.area_id,
     goal_id: form.goal_id,
     title: form.title,

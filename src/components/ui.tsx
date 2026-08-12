@@ -1,4 +1,6 @@
+import { Eye } from 'lucide-react'
 import { useId, useState, type ReactNode } from 'react'
+import { isPdf } from '@/lib/image'
 
 export function Field({
   label,
@@ -51,6 +53,88 @@ export function PlaceholderBox({ label, height }: { label: string; height: strin
  * images when printing unless every ancestor opts in, which is why scans used
  * to look right on screen and come out blank in the PDF.
  */
+export function Lightbox({
+  url,
+  alt,
+  onClose,
+}: {
+  url: string
+  alt: string
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="dialog-backdrop no-print"
+      role="dialog"
+      aria-modal="true"
+      aria-label={alt || 'Full size preview'}
+      style={{ cursor: 'zoom-out', zIndex: 40 }}
+      onClick={onClose}
+    >
+      <img
+        src={url}
+        alt={alt}
+        style={{
+          maxWidth: '92vw',
+          maxHeight: '92vh',
+          objectFit: 'contain',
+          boxShadow: 'var(--shadow-lg)',
+          border: '8px solid var(--color-surface)',
+        }}
+      />
+    </div>
+  )
+}
+
+/**
+ * See the file without leaving the page. Images open in the lightbox; PDFs go
+ * to a new tab, where the browser's own reader beats anything drawn here.
+ */
+export function ViewButton({
+  url,
+  mime,
+  title,
+}: {
+  url: string | null
+  mime: string | null
+  title: string
+}) {
+  const [open, setOpen] = useState(false)
+  if (!url) return null
+
+  const label = `View ${title}`
+
+  if (isPdf(mime)) {
+    return (
+      <a
+        className="btn btn-ghost btn-icon"
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        title={label}
+        aria-label={label}
+      >
+        <Eye size={15} />
+      </a>
+    )
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="btn btn-ghost btn-icon"
+        onClick={() => setOpen(true)}
+        title={label}
+        aria-label={label}
+      >
+        <Eye size={15} />
+      </button>
+      {open && <Lightbox url={url} alt={title} onClose={() => setOpen(false)} />}
+    </>
+  )
+}
+
 export function Plate({
   url,
   height,
@@ -92,28 +176,7 @@ export function Plate({
         />
       </div>
 
-      {zoomed && (
-        <div
-          className="dialog-backdrop no-print"
-          role="dialog"
-          aria-modal="true"
-          aria-label={alt || 'Full size preview'}
-          style={{ cursor: 'zoom-out', zIndex: 40 }}
-          onClick={() => setZoomed(false)}
-        >
-          <img
-            src={url}
-            alt={alt}
-            style={{
-              maxWidth: '92vw',
-              maxHeight: '92vh',
-              objectFit: 'contain',
-              boxShadow: 'var(--shadow-lg)',
-              border: '8px solid var(--color-surface)',
-            }}
-          />
-        </div>
-      )}
+      {zoomed && <Lightbox url={url} alt={alt} onClose={() => setZoomed(false)} />}
     </>
   )
 }

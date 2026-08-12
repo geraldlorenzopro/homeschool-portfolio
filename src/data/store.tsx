@@ -108,14 +108,18 @@ export function usePortfolio() {
  * failures as a toast rather than a thrown render error.
  */
 export function useAction<TArgs>(
-  fn: (repo: Repo, args: TArgs) => Promise<void>,
+  // Returns unknown rather than void so a caller can hand back `repo.add`'s
+  // new id directly without wrapping it.
+  fn: (repo: Repo, args: TArgs) => Promise<unknown>,
 ): UseMutationResult<void, Error, TArgs> {
   const repo = useRepo()
   const queryClient = useQueryClient()
   const toast = useToast()
 
   return useMutation<void, Error, TArgs>({
-    mutationFn: (args) => fn(repo, args),
+    mutationFn: async (args) => {
+      await fn(repo, args)
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: portfolioKey }),
     onError: (error) => toast(error.message),
   })
