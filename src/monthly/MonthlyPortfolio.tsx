@@ -316,16 +316,6 @@ function Cover({
             child’s name above and note whose work each sample belongs to.
           </p>
 
-          <div className="cover-belongs">
-            <div className="cover-belongs-label">
-              This book belongs to me — my drawings and words
-            </div>
-            <textarea
-              aria-label="This book belongs to me — my drawings and words"
-              value={year.belongs_to_me}
-              onChange={(e) => update({ belongs_to_me: e.target.value })}
-            />
-          </div>
         </div>
       </div>
     </section>
