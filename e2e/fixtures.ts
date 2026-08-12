@@ -16,7 +16,9 @@ export const test = base.extend<{ app: Page }>({
       }
     })
     page.on('dialog', (dialog) => dialog.accept())
-    await page.goto('/')
+    // The root is now the fork between the two portfolios; these tests are
+    // about the evaluation one, so they start inside it.
+    await page.goto('/evaluation')
     await expect(page.getByRole('heading', { name: 'Student information' })).toBeVisible()
     await use(page)
   },

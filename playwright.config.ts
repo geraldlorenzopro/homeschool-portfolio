@@ -8,6 +8,9 @@ const BASE_URL = 'http://localhost:5174'
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
+  // Rendering a PDF costs real CPU, and six workers doing it at once pushed
+  // past the 30 s default — the tests were timing out, not failing.
+  timeout: 60_000,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? 'list' : [['list']],

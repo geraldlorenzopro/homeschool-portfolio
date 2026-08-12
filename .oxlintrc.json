@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["react", "typescript", "oxc"],
-  "ignorePatterns": ["design_handoff_homeschool_portfolio/**", "public/doc-page.js", "dist/**"],
+  "ignorePatterns": ["design_handoff_homeschool_portfolio/**", "design_handoff_monthly/**", "public/doc-page.js", "dist/**"],
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]

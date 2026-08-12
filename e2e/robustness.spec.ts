@@ -2,14 +2,15 @@ import { expect, test } from './fixtures'
 
 test.describe('Routing, responsiveness and resilience', () => {
   test('deep links work and unknown routes fall back to the dashboard', async ({ app }) => {
-    await app.goto('/portfolio')
+    await app.goto('/evaluation/document')
     await expect(app.getByRole('heading', { name: 'Annual Evaluation Portfolio' })).toBeVisible()
 
-    await app.goto('/quick-log')
+    await app.goto('/evaluation/quick-log')
     await expect(app.getByRole('heading', { name: 'One running log' })).toBeVisible()
 
+    // An unknown route now lands on the fork, not inside a portfolio.
     await app.goto('/nothing-here')
-    await expect(app.getByRole('heading', { name: 'Student information' })).toBeVisible()
+    await expect(app.getByRole('heading', { name: /Which portfolio/ })).toBeVisible()
   })
 
   test('the back button moves between the flows', async ({ app }) => {

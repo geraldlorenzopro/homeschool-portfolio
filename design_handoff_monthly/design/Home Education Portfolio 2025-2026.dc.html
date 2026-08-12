@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/classical-d3693db7-4f3e-4400-b642-0cd306a8d9bc/styles.css">
+<script src="_ds/classical-d3693db7-4f3e-4400-b642-0cd306a8d9bc/_ds_bundle.js"></script>
+<script src="./doc-page.js"></script>
+<script src="./image-slot.js"></script>
+<style>
+doc-page:not(:defined){visibility:hidden}
+input,textarea{font-family:var(--font-body);color:var(--color-text);background:transparent;outline:none}
+textarea{resize:none}
+input:focus-visible,textarea:focus-visible{outline:2px solid var(--color-accent);outline-offset:1px}
+input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--color-text) 34%,transparent);font-style:italic}
+a{color:var(--color-accent-700);text-decoration:underline;text-underline-offset:2px}
+a:hover{color:var(--color-accent)}
+@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}input::placeholder,textarea::placeholder{color:transparent}#pf-toolbar{display:none !important}}
+</style>
+</helmet>
+<div id="pf-toolbar" style="position:fixed;top:14px;right:14px;z-index:99;display:flex;gap:8px;padding:8px;border:1px solid var(--color-divider);border-radius:8px;background:var(--color-bg);box-shadow:var(--shadow-sm);font-family:var(--font-body)">
+  <button type="button" onClick="{{ onExport }}" style="border:1px solid var(--color-accent);border-radius:4px;background:transparent;color:var(--color-text);font-family:var(--font-heading);font-size:12px;padding:7px 11px;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)">Guardar copia</button>
+  <button type="button" onClick="{{ onImport }}" style="border:1px solid var(--color-divider);border-radius:4px;background:transparent;color:var(--color-text);font-family:var(--font-heading);font-size:12px;padding:7px 11px;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 7%,transparent)">Cargar copia</button>
+  <button type="button" onClick="{{ onPrint }}" style="border:1px solid var(--color-divider);border-radius:4px;background:transparent;color:var(--color-text);font-family:var(--font-heading);font-size:12px;padding:7px 11px;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 7%,transparent)">Imprimir / PDF</button>
+  <span id="pf-saved" style="align-self:center;font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 45%,transparent)">Guardado</span>
+</div>
+<doc-page size="letter">
+
+<section class="page" style="box-sizing:border-box;padding:0.42in;background:oklch(0.955 0.028 350);color:var(--color-text);font-family:var(--font-body);display:flex">
+  <div style="flex:1;border:1px solid oklch(0.72 0.115 352);border-radius:10px;padding:0.4in;display:flex">
+    <div style="flex:1;border:1px solid color-mix(in srgb,oklch(0.72 0.115 352) 38%,transparent);border-radius:6px;background:var(--color-bg);padding:0.42in 0.44in;display:flex;flex-direction:column;align-items:center;text-align:center">
+      <div style="font-size:9.5px;letter-spacing:0.24em;text-transform:uppercase;color:oklch(0.72 0.115 352);font-variant-numeric:tabular-nums">Florida Statute 1002.41 &middot; Broward County</div>
+      <h1 style="font-family:var(--font-heading);font-weight:400;font-style:italic;font-size:60px;line-height:1.02;letter-spacing:-0.015em;margin:12px 0 0">Home Education<br>Portfolio</h1>
+      <div style="display:flex;align-items:center;gap:12px;width:78%;margin:16px 0 4px">
+        <div style="flex:1;height:1px;background:oklch(0.72 0.115 352)"></div>
+        <div style="width:7px;height:7px;border:1px solid oklch(0.72 0.115 352);transform:rotate(45deg)"></div>
+        <div style="width:5px;height:5px;border-radius:50%;background:oklch(0.72 0.115 352)"></div>
+        <div style="width:7px;height:7px;border:1px solid oklch(0.72 0.115 352);transform:rotate(45deg)"></div>
+        <div style="flex:1;height:1px;background:oklch(0.72 0.115 352)"></div>
+      </div>
+      <div style="font-family:var(--font-heading);font-size:27px;font-variant-numeric:tabular-nums;color:oklch(0.5 0.115 352)">School Year 2025&ndash;2026</div>
+      <div style="margin:26px 0 8px;padding:9px;border:1px solid color-mix(in srgb,oklch(0.72 0.115 352) 45%,transparent);border-radius:50%;background:oklch(0.955 0.028 350)">
+        <image-slot id="cover-photo" style="width:2.5in;height:2.5in;display:block" shape="circle" placeholder="Sube aqu&iacute; la foto de la ni&ntilde;a"></image-slot>
+      </div>
+      <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 50%,transparent)">Arrastra o haz clic para subir la foto</div>
+      <div style="margin-top:26px;display:flex;flex-direction:column;gap:16px;width:82%">
+        <label style="display:block"><span style="font-size:9.5px;letter-spacing:0.18em;text-transform:uppercase;color:oklch(0.5 0.115 352)">Student</span>
+          <input data-fill="student" style="display:block;width:100%;text-align:center;border:0;border-bottom:1px solid oklch(0.72 0.115 352);font-family:var(--font-heading);font-style:italic;font-size:24px;padding:4px 2px"></label>
+        <label style="display:block"><span style="font-size:9.5px;letter-spacing:0.18em;text-transform:uppercase;color:oklch(0.5 0.115 352)">Parent</span>
+          <input data-fill="parent" style="display:block;width:100%;text-align:center;border:0;border-bottom:1px solid var(--color-divider);font-size:16px;padding:5px 2px"></label>
+      </div>
+      <p style="margin:20px 0 0;font-size:11.5px;line-height:1.6;max-width:4.2in;color:color-mix(in srgb,var(--color-text) 70%,transparent)">One portfolio may be used for more than one child in the same family. Add each child&rsquo;s name above and note whose work each sample belongs to.</p>
+      <div style="margin-top:auto;padding-top:16px;width:100%">
+        <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:oklch(0.5 0.115 352);margin-bottom:7px">This book belongs to me &mdash; my drawings and words</div>
+        <textarea style="width:100%;height:1.15in;box-sizing:border-box;border:1px solid color-mix(in srgb,oklch(0.72 0.115 352) 40%,transparent);border-radius:8px;background:oklch(0.955 0.028 350);padding:9px;font-size:12px;line-height:22px"></textarea>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page" style="box-sizing:border-box;padding:0.7in 0.75in;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;flex-direction:column">
+  <div style="font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--color-accent)">Portfolio record</div>
+  <h2 style="font-family:var(--font-heading);font-weight:400;font-style:italic;font-size:38px;margin:8px 0 0">Home Education Portfolio</h2>
+  <div style="height:1px;background:var(--color-divider);margin:18px 0 22px"></div>
+  <div style="display:flex;gap:34px;font-size:13px">
+    <label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">From</span>
+      <input data-fill="from" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:5px 2px;font-variant-numeric:tabular-nums"></label>
+    <label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">To</span>
+      <input data-fill="to" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:5px 2px;font-variant-numeric:tabular-nums"></label>
+  </div>
+  <label style="display:block;margin-top:22px"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">For student(s)</span>
+    <input data-fill="student" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:5px 2px"></label>
+
+  <h3 style="font-family:var(--font-heading);font-weight:600;font-size:20px;margin:38px 0 4px">A complete Florida portfolio must contain</h3>
+  <div style="height:1px;background:var(--color-divider);margin-bottom:14px"></div>
+  <div style="display:flex;flex-direction:column;gap:13px;font-size:14px;line-height:1.5">
+    <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" style="margin:4px 0 0;width:13px;height:13px;accent-color:var(--color-accent)"><span>A <strong style="font-weight:600">log of educational activities</strong>, kept around the time of the learning</span></label>
+    <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" style="margin:4px 0 0;width:13px;height:13px;accent-color:var(--color-accent)"><span><strong style="font-weight:600">Titles of materials</strong> read or used during the year</span></label>
+    <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" style="margin:4px 0 0;width:13px;height:13px;accent-color:var(--color-accent)"><span><strong style="font-weight:600">Samples of work</strong> created or used by the student</span></label>
+    <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" style="margin:4px 0 0;width:13px;height:13px;accent-color:var(--color-accent)"><span><strong style="font-weight:600">Evidence of educational progress</strong> commensurate with the student&rsquo;s ability, over the course of the year</span></label>
+  </div>
+
+  <h3 style="font-family:var(--font-heading);font-weight:600;font-size:20px;margin:34px 0 4px">Recommended, not required</h3>
+  <div style="height:1px;background:var(--color-divider);margin-bottom:12px"></div>
+  <p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 76%,transparent)">Florida Department of Education policy <em>recommends</em> &mdash; but Florida law does not require &mdash; that the portfolio also hold copies of:</p>
+  <div style="display:flex;flex-direction:column;gap:13px;font-size:14px">
+    <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" style="margin:4px 0 0;width:13px;height:13px;accent-color:var(--color-accent)"><span>The Letter of Intent (Notice of Intent)</span></label>
+    <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" style="margin:4px 0 0;width:13px;height:13px;accent-color:var(--color-accent)"><span>The annual evaluation</span></label>
+  </div>
+  <p style="margin-top:auto;padding-top:22px;border-top:1px solid var(--color-divider);font-size:11px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 62%,transparent)">The Letter of Intent is completed once, when the home education program begins; after several years of homeschooling it may be an old document. School districts may not add requirements beyond those set in state law.</p>
+</section>
+
+<section class="page" style="box-sizing:border-box;padding:0.7in 0.75in;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;flex-direction:column">
+  <div style="font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--color-accent)">Student record</div>
+  <h2 style="font-family:var(--font-heading);font-weight:400;font-style:italic;font-size:38px;margin:8px 0 0">Child&rsquo;s Information</h2>
+  <div style="height:1px;background:var(--color-divider);margin:18px 0 26px"></div>
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <label style="display:block"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Child&rsquo;s full name</span>
+      <input data-fill="student" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:16px;padding:6px 2px"></label>
+    <div style="display:flex;gap:34px">
+      <label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Date of birth</span>
+        <input placeholder="MM / DD / YYYY" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:16px;padding:6px 2px;font-variant-numeric:tabular-nums"></label>
+      <label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Date of the Letter of Intent</span>
+        <input placeholder="MM / DD / YYYY" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:16px;padding:6px 2px;font-variant-numeric:tabular-nums"></label>
+    </div>
+    <p style="margin:-8px 0 0;font-size:11px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 62%,transparent);max-width:5.6in">The month and day of the Letter of Intent is the annual evaluation deadline every year &mdash; unless the child stops homeschooling first, in which case the deadline becomes 30 days after the Notice of Termination. When moving to another Florida county, use the Transfer Request instead.</p>
+    <label style="display:block"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Parent&rsquo;s name</span>
+      <input data-fill="parent" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:16px;padding:6px 2px"></label>
+    <label style="display:block"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Address</span>
+      <input data-fill="addr" placeholder="Street address" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:16px;padding:6px 2px"></label>
+    <div style="display:flex;gap:20px;align-items:flex-end">
+      <input data-fill="city" placeholder="City" style="flex:2;border:0;border-bottom:1px solid var(--color-divider);font-size:16px;padding:6px 2px">
+      <span style="font-size:16px;padding-bottom:6px">, FL</span>
+      <input data-fill="zip" placeholder="ZIP" style="flex:1;border:0;border-bottom:1px solid var(--color-divider);font-size:16px;padding:6px 2px;font-variant-numeric:tabular-nums">
+    </div>
+  </div>
+  <div style="margin-top:34px;flex:1;display:flex;flex-direction:column">
+    <div style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Optional &mdash; notes anyone reading this record should know</div>
+    <p style="margin:6px 0 10px;font-size:11px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 62%,transparent)">For example, special needs that may affect this child&rsquo;s learning.</p>
+    <textarea style="flex:1;width:100%;box-sizing:border-box;border:1px solid var(--color-divider);border-radius:4px;padding:10px 12px;font-size:13px;line-height:26px;background-image:repeating-linear-gradient(var(--color-bg) 0 25px,var(--color-divider) 25px 26px)"></textarea>
+  </div>
+</section>
+
+<sc-for list="{{ months }}" as="m" hint-placeholder-count="2">
+<section class="page" style="box-sizing:border-box;padding:0.5in 0.45in;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;flex-direction:column">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:20px">
+    <div style="font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--color-accent)">Log of Educational Activities</div>
+    <div style="font-size:11px;font-variant-numeric:tabular-nums;color:color-mix(in srgb,var(--color-text) 62%,transparent)">School year 2025&ndash;2026</div>
+  </div>
+  <h2 style="font-family:var(--font-heading);font-weight:400;font-style:italic;font-size:36px;margin:6px 0 0">{{ m.label }}</h2>
+  <div style="display:flex;gap:26px;align-items:flex-end;margin-top:12px">
+    <label style="flex:1"><span style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Student</span>
+      <input data-fill="student" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:13px;padding:4px 2px"></label>
+    <label style="width:2.1in"><span style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Hours or notes</span>
+      <input style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:13px;padding:4px 2px"></label>
+  </div>
+  <p style="margin:14px 0 8px;font-size:10.5px;line-height:1.55;color:color-mix(in srgb,var(--color-text) 66%,transparent)">Check the box under the day of the month on which the subject was covered. Cross out day columns that do not exist in this month.</p>
+
+  <div style="border:1px solid var(--color-divider);border-radius:4px;overflow:hidden">
+    <div style="display:grid;grid-template-columns:1.35in repeat(31,1fr);align-items:stretch;border-bottom:1px solid var(--color-divider);background:var(--color-accent-100)">
+      <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;padding:6px 7px;color:color-mix(in srgb,var(--color-text) 60%,transparent)">Subject / Date</div>
+      <sc-for list="{{ days }}" as="d" hint-placeholder-count="31"><div style="border-left:1px solid var(--color-divider);text-align:center;font-size:8px;padding:6px 0;font-variant-numeric:tabular-nums">{{ d }}</div></sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:1.35in repeat(31,1fr);border-bottom:1px solid var(--color-divider)">
+      <div style="font-size:10px;padding:0 7px;display:flex;align-items:center;height:26px">Language Arts</div>
+      <sc-for list="{{ days }}" as="d" hint-placeholder-count="31"><div style="border-left:1px solid var(--color-divider);display:flex;align-items:center;justify-content:center"><input type="checkbox" style="width:9px;height:9px;margin:0;accent-color:var(--color-accent);cursor:pointer"></div></sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:1.35in repeat(31,1fr);border-bottom:1px solid var(--color-divider)">
+      <div style="font-size:10px;padding:0 7px;display:flex;align-items:center;height:26px">Mathematics</div>
+      <sc-for list="{{ days }}" as="d" hint-placeholder-count="31"><div style="border-left:1px solid var(--color-divider);display:flex;align-items:center;justify-content:center"><input type="checkbox" style="width:9px;height:9px;margin:0;accent-color:var(--color-accent);cursor:pointer"></div></sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:1.35in repeat(31,1fr);border-bottom:1px solid var(--color-divider)">
+      <div style="font-size:10px;padding:0 7px;display:flex;align-items:center;height:26px">Music</div>
+      <sc-for list="{{ days }}" as="d" hint-placeholder-count="31"><div style="border-left:1px solid var(--color-divider);display:flex;align-items:center;justify-content:center"><input type="checkbox" style="width:9px;height:9px;margin:0;accent-color:var(--color-accent);cursor:pointer"></div></sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:1.35in repeat(31,1fr);border-bottom:1px solid var(--color-divider)">
+      <div style="display:flex;align-items:center;height:26px;padding:0 4px"><input placeholder="Other subject" style="width:100%;border:0;font-size:10px;padding:2px 3px"></div>
+      <sc-for list="{{ days }}" as="d" hint-placeholder-count="31"><div style="border-left:1px solid var(--color-divider);display:flex;align-items:center;justify-content:center"><input type="checkbox" style="width:9px;height:9px;margin:0;accent-color:var(--color-accent);cursor:pointer"></div></sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:1.35in repeat(31,1fr)">
+      <div style="display:flex;align-items:center;height:26px;padding:0 4px"><input placeholder="Other subject" style="width:100%;border:0;font-size:10px;padding:2px 3px"></div>
+      <sc-for list="{{ days }}" as="d" hint-placeholder-count="31"><div style="border-left:1px solid var(--color-divider);display:flex;align-items:center;justify-content:center"><input type="checkbox" style="width:9px;height:9px;margin:0;accent-color:var(--color-accent);cursor:pointer"></div></sc-for>
+    </div>
+  </div>
+
+  <h3 style="font-family:var(--font-heading);font-weight:600;font-size:18px;margin:26px 0 3px">Titles of Reading Materials</h3>
+  <p style="margin:0 0 10px;font-size:10.5px;line-height:1.55;color:color-mix(in srgb,var(--color-text) 62%,transparent)">Books, workbooks, textbooks, articles, apps, websites, comics, magazines, audiobooks, subtitled videos &mdash; read by, to, or with the student. A title counts even if it was not finished.</p>
+  <textarea style="flex:1;width:100%;box-sizing:border-box;border:1px solid var(--color-divider);border-radius:4px;padding:9px 12px;font-size:12px;line-height:24px;background-image:repeating-linear-gradient(var(--color-bg) 0 23px,var(--color-divider) 23px 24px)"></textarea>
+  <div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--color-divider);display:flex;justify-content:space-between;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 48%,transparent)"><span>Home Education Portfolio &middot; Broward County, Florida</span><span>{{ m.label }}</span></div>
+</section>
+
+<section class="page" style="box-sizing:border-box;padding:0.7in 0.75in;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;flex-direction:column">
+  <div style="font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--color-accent)">Monthly notes</div>
+  <h2 style="font-family:var(--font-heading);font-weight:400;font-style:italic;font-size:36px;margin:6px 0 0">{{ m.label }}</h2>
+  <div style="height:1px;background:var(--color-divider);margin:16px 0 22px"></div>
+  <h3 style="font-family:var(--font-heading);font-weight:600;font-size:18px;margin:0 0 3px">Field trips, special events &amp; educational activities</h3>
+  <p style="margin:0 0 10px;font-size:10.5px;color:color-mix(in srgb,var(--color-text) 62%,transparent)">Places visited, projects made, classes attended, anything else worth remembering this month.</p>
+  <textarea style="flex:1;width:100%;box-sizing:border-box;border:1px solid var(--color-divider);border-radius:4px;padding:9px 12px;font-size:12.5px;line-height:26px;background-image:repeating-linear-gradient(var(--color-bg) 0 25px,var(--color-divider) 25px 26px)"></textarea>
+  <h3 style="font-family:var(--font-heading);font-weight:600;font-size:18px;margin:26px 0 3px">Accomplishments this month</h3>
+  <p style="margin:0 0 10px;font-size:10.5px;color:color-mix(in srgb,var(--color-text) 62%,transparent)">Improvements, materials finished, new levels reached, goals met, awards won. Some parents fill this in only at mid-year and at the end of the year.</p>
+  <textarea style="flex:1;width:100%;box-sizing:border-box;border:1px solid var(--color-divider);border-radius:4px;padding:9px 12px;font-size:12.5px;line-height:26px;background-image:repeating-linear-gradient(var(--color-bg) 0 25px,var(--color-divider) 25px 26px)"></textarea>
+  <p style="margin:18px 0 0;padding-top:10px;border-top:1px solid var(--color-divider);font-size:10.5px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 62%,transparent)">Keep samples of work for a complete portfolio under Florida law &mdash; in a pocket folder, a binder, or plastic sleeves. Aim for a couple of samples per subject early in the year, a few more every several weeks, and again near the end.</p>
+</section>
+</sc-for>
+
+<section class="page" style="box-sizing:border-box;padding:0.7in 0.8in;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;flex-direction:column">
+  <div style="font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--color-accent)">Legal form &middot; send to the district</div>
+  <h2 style="font-family:var(--font-heading);font-weight:400;font-style:italic;font-size:36px;margin:8px 0 0">Notice of Intent</h2>
+  <div style="height:1px;background:var(--color-divider);margin:16px 0 18px"></div>
+  <div style="display:flex;gap:12px;align-items:baseline;font-size:13px"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Effective date of notice</span>
+    <input placeholder="MM / DD / YYYY" style="flex:1;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px;font-variant-numeric:tabular-nums"></div>
+  <p style="margin:8px 0 22px;font-size:10.5px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 62%,transparent)">Send this notice to the school district within 30 days before or after the effective date. That date becomes the annual evaluation due date in future years; an additional evaluation is due within 30 days of terminating the program.</p>
+  <div style="display:flex;gap:10px;align-items:baseline;font-size:14px">To: The Superintendent of
+    <input data-fill="county" style="flex:1;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:3px 2px"> County Schools</div>
+  <p style="margin:14px 0 20px;font-size:14px">RE: Letter of Intent to begin a Home Education Program</p>
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:5in">
+    <label><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Student&rsquo;s full name</span><input data-fill="student" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label>
+    <label><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Student&rsquo;s date of birth</span><input placeholder="MM / DD / YYYY" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px;font-variant-numeric:tabular-nums"></label>
+    <label><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Parent&rsquo;s name</span><input data-fill="parent" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label>
+    <label><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Address</span><input data-fill="addr" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label>
+    <div style="display:flex;gap:16px;align-items:flex-end"><input data-fill="city" placeholder="City" style="flex:2;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"><span style="font-size:15px;padding-bottom:4px">, Florida</span><input data-fill="zip" placeholder="ZIP" style="flex:1;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px;font-variant-numeric:tabular-nums"></div>
+  </div>
+  <p style="margin:22px 0 0;font-size:12.5px;line-height:1.65;text-align:justify">The student named above will be instructed in a home education program as described in Florida Statute 1002.41. This notice of intent to begin a Home Education Program is sent within thirty days of beginning the program, in compliance with Florida Statute 1002.41(a&ndash;b). A portfolio with a log of educational activities, titles of reading materials, and samples of work will be kept in accordance with Florida law. An evaluation will be done and documentation sent to the school district by the anniversary of this letter annually, and an evaluation will be sent with a Letter of Termination within 30 days of ending the program.</p>
+  <p style="margin:12px 0 0;font-size:12.5px;line-height:1.65;text-align:justify">Please record this Letter of Intent as required by Florida law, and please confirm receipt in writing as required by FL DOE policy as outlined in their Home Education FAQ document. Thank you.</p>
+  <div style="margin-top:26px;display:flex;gap:24px;align-items:flex-end;max-width:5in"><label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Parent&rsquo;s signature</span><div style="height:26px;border-bottom:1px solid var(--color-text)"></div></label><label style="width:1.6in"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Date</span><input style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px;font-variant-numeric:tabular-nums"></label></div>
+  <div style="margin-top:8px;font-size:11px;color:color-mix(in srgb,var(--color-text) 62%,transparent)">cc: parent&rsquo;s records</div>
+  <p style="margin-top:auto;padding-top:16px;border-top:1px solid var(--color-divider);font-size:10px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 60%,transparent)">Contact information for every Florida district&rsquo;s home education office is kept by the FL DOE at fldoe.org &rarr; School Choice &rarr; Home Education &rarr; District Home Education Contacts. State law sets the requirements of a home education program, and districts are prohibited from adding any of their own.</p>
+</section>
+
+<section class="page" style="box-sizing:border-box;padding:0.7in 0.8in;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;flex-direction:column">
+  <div style="font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--color-accent)">Legal form &middot; optional, after a move</div>
+  <h2 style="font-family:var(--font-heading);font-weight:400;font-style:italic;font-size:36px;margin:8px 0 0">Home Education Program Transfer Request</h2>
+  <div style="height:1px;background:var(--color-divider);margin:16px 0 18px"></div>
+  <p style="margin:0 0 16px;font-size:10.5px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 62%,transparent)">For a student previously home educated in one Florida county who has moved to another Florida county where the program continues. Send within 30 days of moving, to both the former and the new county.</p>
+  <div style="display:flex;gap:12px;align-items:baseline;font-size:13px;max-width:3.4in"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Date</span><input placeholder="MM / DD / YYYY" style="flex:1;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px;font-variant-numeric:tabular-nums"></div>
+  <p style="margin:18px 0 16px;font-size:12.5px;line-height:1.65">I, the parent of the home educated child listed below, am requesting a transfer of my child&rsquo;s Home Education Program due to a change of address:</p>
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <label><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Student&rsquo;s full name</span><input data-fill="student" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label>
+    <div style="display:flex;gap:26px"><label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Student&rsquo;s date of birth</span><input placeholder="MM / DD / YYYY" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px;font-variant-numeric:tabular-nums"></label>
+    <label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Parent&rsquo;s name</span><input data-fill="parent" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label></div>
+    <label><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Student&rsquo;s former address</span><input style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label>
+    <label><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Student&rsquo;s new address</span><input style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label>
+    <div style="display:flex;gap:26px"><label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">New county</span><input style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label>
+    <label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Former county</span><input data-fill="county" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label></div>
+  </div>
+  <p style="margin:20px 0 0;font-size:12.5px;line-height:1.65;text-align:justify">The student named above will continue in a Home Education Program in the new county, where the student now resides. This form should serve as a Notice of Intent registering the program with the Superintendent of the new county, using the same anniversary date as the original Notice of Intent. No evaluation and no notice of termination is required because of a change of residence. The Superintendent of the former county should close out the student&rsquo;s home education file and confirm the next evaluation due date to both the parent and the Superintendent of the new county, by mail or electronically.</p>
+  <div style="margin-top:24px;display:flex;gap:24px;align-items:flex-end"><label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Parent&rsquo;s signature</span><div style="height:26px;border-bottom:1px solid var(--color-text)"></div></label><label style="width:1.6in"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Date</span><input style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px;font-variant-numeric:tabular-nums"></label></div>
+  <div style="margin-top:16px;display:flex;gap:26px"><label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Parent&rsquo;s email (optional)</span><input style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label><label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Phone (optional)</span><input style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px;font-variant-numeric:tabular-nums"></label></div>
+  <p style="margin-top:auto;padding-top:16px;border-top:1px solid var(--color-divider);font-size:10px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 60%,transparent)">Contact information is optional, but it helps the district confirm receipt or ask a question. Submit this form to both county home education offices after moving, and keep a copy of the form and of the district&rsquo;s verification for your records.</p>
+</section>
+
+<section class="page" style="box-sizing:border-box;padding:0.7in 0.8in;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;flex-direction:column">
+  <div style="font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--color-accent)">Legal form &middot; when the program ends</div>
+  <h2 style="font-family:var(--font-heading);font-weight:400;font-style:italic;font-size:36px;margin:8px 0 0">Notice of Termination</h2>
+  <div style="height:1px;background:var(--color-divider);margin:16px 0 18px"></div>
+  <div style="display:flex;gap:12px;align-items:baseline;font-size:13px;max-width:3.6in"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Effective date of notice</span><input placeholder="MM / DD / YYYY" style="flex:1;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px;font-variant-numeric:tabular-nums"></div>
+  <p style="margin:8px 0 22px;font-size:10.5px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 62%,transparent)">Send this notice to the school district within 30 days after the date the home education program ended &mdash; whether because of a move out of state, high school graduation, enrolling in a school, or any other reason.</p>
+  <div style="display:flex;gap:10px;align-items:baseline;font-size:14px">To: The Superintendent of <input data-fill="county" style="flex:1;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:3px 2px"> County Schools</div>
+  <p style="margin:14px 0 20px;font-size:14px">RE: Letter of Termination of a Home Education Program</p>
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:5in">
+    <label><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Student&rsquo;s full name</span><input data-fill="student" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label>
+    <label><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Student&rsquo;s date of birth</span><input placeholder="MM / DD / YYYY" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px;font-variant-numeric:tabular-nums"></label>
+    <label><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Parent&rsquo;s name</span><input data-fill="parent" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label>
+    <label><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Address</span><input data-fill="addr" style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"></label>
+    <div style="display:flex;gap:16px;align-items:flex-end"><input data-fill="city" placeholder="City" style="flex:2;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px"><span style="font-size:15px;padding-bottom:4px">, Florida</span><input data-fill="zip" placeholder="ZIP" style="flex:1;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px;font-variant-numeric:tabular-nums"></div>
+  </div>
+  <p style="margin:22px 0 0;font-size:12.5px;line-height:1.65;text-align:justify">The home education program for the above-named student has ended. This notice regarding termination of the Home Education Program is sent within thirty days of ending the program, in compliance with Florida Statute 1002.41(1)(c). This notice is accompanied by a final evaluation as required by Florida law. Please record this Letter of Termination as stated in Florida law. Thank you.</p>
+  <div style="margin-top:26px;display:flex;gap:24px;align-items:flex-end;max-width:5in"><label style="flex:1"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Parent&rsquo;s signature</span><div style="height:26px;border-bottom:1px solid var(--color-text)"></div></label><label style="width:1.6in"><span style="font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Date</span><input style="display:block;width:100%;border:0;border-bottom:1px solid var(--color-divider);font-size:15px;padding:4px 2px;font-variant-numeric:tabular-nums"></label></div>
+  <div style="margin-top:8px;font-size:11px;color:color-mix(in srgb,var(--color-text) 62%,transparent)">cc: parent&rsquo;s records</div>
+  <p style="margin-top:auto;padding-top:16px;border-top:1px solid var(--color-divider);font-size:10px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 60%,transparent)">Contact information for every Florida district&rsquo;s home education office is kept by the FL DOE. Schools must accept official transcripts given to them by parents under the Uniform Transfer of Credit Rule, as long as the student passes the first grading period in the school.</p>
+</section>
+
+<section class="page" style="box-sizing:border-box;padding:0.7in 0.75in;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;flex-direction:column">
+  <div style="font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--color-accent)">End of portfolio</div>
+  <h2 style="font-family:var(--font-heading);font-weight:400;font-style:italic;font-size:36px;margin:8px 0 0">Any Additional Notes</h2>
+  <div style="height:1px;background:var(--color-divider);margin:16px 0 20px"></div>
+  <textarea style="flex:1;width:100%;box-sizing:border-box;border:1px solid var(--color-divider);border-radius:4px;padding:10px 12px;font-size:13px;line-height:26px;background-image:repeating-linear-gradient(var(--color-bg) 0 25px,var(--color-divider) 25px 26px)"></textarea>
+</section>
+
+</doc-page>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;studentName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Sofía Ramírez&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;parentName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Ana Ramírez&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;county&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Broward&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const days = [];
+    for (let i = 1; i <= 31; i++) days.push(i);
+    const names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const months = [];
+    for (let i = 0; i < 12; i++) {
+      const idx = (7 + i) % 12;
+      months.push({ label: names[idx] + ' ' + (idx >= 7 ? 2025 : 2026) });
+    }
+    const KEY = 'hep-2025-2026';
+    return {
+      days, months,
+      onPrint: () => window.print(),
+      onExport: () => {
+        const blob = new Blob([localStorage.getItem(KEY) || '{}'], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'portafolio-sofia-2025-2026.json';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      },
+      onImport: () => {
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = 'application/json,.json';
+        inp.onchange = () => {
+          const file = inp.files && inp.files[0];
+          if (!file) return;
+          const r = new FileReader();
+          r.onload = () => {
+            try {
+              JSON.parse(r.result);
+              localStorage.setItem(KEY, r.result);
+              location.reload();
+            } catch (e) { alert('Ese archivo no es una copia válida del portafolio.'); }
+          };
+          r.readAsText(file);
+        };
+        inp.click();
+      }
+    };
+  }
+
+  autofillFromReport() {
+    const plan = {
+      'January 2026': {
+        la: [8, 14, 18, 19, 22, 26, 28, 29], math: [14, 18, 22, 26, 29],
+        notes: 'Time4Learning Kindergarten (Language Arts & Math)',
+        titles: 'Time4Learning Kindergarten \u2014 Language Arts and Math (online curriculum)\nChapter: Print Awareness \u2014 Story: Pig\u2019s ABCs\nChapter: Playtime in the Park (Math) \u2014 shapes, flats and solids\nChapter: Active Listening and Sound \u2014 rhymes and patterns, the five senses\nStory: Mary Had a Little Lamb',
+        wins: 'Time4Learning K: finished the Print Awareness chapter and began Playtime in the Park (Math). Quiz: The Alphabet 100%. Quiz: Describe the Position of Objects 100%. Identifies and matches uppercase and lowercase letters at 100%.'
+      },
+      'February 2026': {
+        la: [2, 4, 5, 13, 18, 19, 23], math: [2, 13],
+        notes: 'Time4Learning Kindergarten (Language Arts & Math)',
+        titles: 'Chapter: The Sights and Sounds of m and s\nChapter: The Sights and Sounds of d and a\nChapter: The Sights and Sounds of p and i\nI am: A Decodable Story\nStory: Hey Diddle Diddle\nStory: Pease Pudding',
+        wins: 'Phonics and alliteration for m, s, d and a at 100%. Read two decodable stories on her own. Sentence completion 100%. Math: comparing flats and solids 80%.'
+      },
+      'March 2026': {
+        la: [2, 3, 18, 23, 24], math: [2, 3, 18, 24],
+        notes: 'Time4Learning Kindergarten (Language Arts & Math)',
+        titles: 'Chapter: Lets Go On a Safari (Math) \u2014 counting 1\u20135 and 0\u201310\nChapter: The Sights and Sounds of l and n\nChapter: Review 1 \u2014 Phonics Review\nBackground for The Little Red Hen\nStory: Busy Baby Animals: Tiger\nSam and Dad: A Decodable Story',
+        wins: 'Counting numbers 1\u20135 and 0\u201310 at 100%. Phonics l, n and short a at 100%. Read Busy Baby Animals: Tiger and Sam and Dad on her own.'
+      },
+      'April 2026': {
+        la: [20], math: [],
+        notes: 'Time4Learning Kindergarten (Language Arts)',
+        titles: 'Chapter: The Sights and Sounds of o and b\nPractice Resource: Prepositions (Hugo the Great)',
+        wins: 'Prepositions \u2014 in, out, over and under \u2014 at 100%. Started the short sound of o.'
+      },
+      'May 2026': {
+        la: [4], math: [4],
+        notes: 'Time4Learning Kindergarten (Language Arts & Math)',
+        titles: 'Chapter: The Sights and Sounds of e and r\nStory: It\u2019s Raining, It\u2019s Pouring\nPractice Resource: Supporting Ideas (It\u2019s Raining on Saturday)\nMath: Compare Two Numbers (numerals)',
+        wins: 'Recalling details from a story at 100%. Matching pictures with verb tense at 100%. Math: comparing two numerals.'
+      },
+      'June 2026': {
+        la: [2], math: [],
+        notes: 'Time4Learning Kindergarten (Language Arts)',
+        titles: 'Chapter: The Sights and Sounds of e and r \u2014 short e\nPractice Resource: Supporting Ideas (It\u2019s Raining on Saturday)',
+        wins: 'Explored the short sound of e and rhyming word pairs. Year totals in Time4Learning: 30 scored activities averaging 98%, 5 quizzes averaging 84%, 38 non-scored activities. Course averages: Language Arts 98%, Math 88%.'
+      }
+    };
+    document.querySelectorAll('.page').forEach((pg) => {
+      const h = pg.querySelector('h2');
+      if (!h) return;
+      const p = plan[h.textContent.trim()];
+      if (!p) return;
+      const boxes = pg.querySelectorAll('input[type=checkbox]');
+      if (boxes.length) {
+        p.la.forEach((d) => { if (boxes[d - 1]) boxes[d - 1].checked = true; });
+        p.math.forEach((d) => { if (boxes[31 + d - 1]) boxes[31 + d - 1].checked = true; });
+        const texts = Array.from(pg.querySelectorAll('input')).filter((e) => e.type !== 'checkbox');
+        if (texts[1]) texts[1].value = p.notes;
+        const ta = pg.querySelector('textarea');
+        if (ta) ta.value = p.titles;
+      } else {
+        const tas = pg.querySelectorAll('textarea');
+        if (tas[1]) tas[1].value = p.wins;
+      }
+    });
+  }
+
+  componentDidMount() {
+    this.autofillFromReport();
+    const defaults = {
+      student: this.props.studentName ?? 'Sofía Ramírez',
+      parent: this.props.parentName ?? 'Ana Ramírez',
+      county: this.props.county ?? 'Broward',
+      city: '', zip: '', addr: '',
+      from: 'August 2025', to: 'July 2026'
+    };
+    const KEY = 'hep-2025-2026';
+    let store = {};
+    try { store = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+    const fields = Array.from(document.querySelectorAll('input, textarea'));
+    fields.forEach((el, i) => {
+      const k = 'f' + i;
+      const fill = el.getAttribute('data-fill');
+      if (el.type === 'checkbox') {
+        if (k in store) el.checked = !!store[k];
+      } else {
+        if (store[k] != null) el.value = store[k];
+        else if (!el.value && fill && defaults[fill]) el.value = defaults[fill];
+      }
+      const save = () => {
+        store[k] = el.type === 'checkbox' ? el.checked : el.value;
+        try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+        const flag = document.getElementById('pf-saved');
+        if (flag) {
+          flag.textContent = 'Guardando…';
+          clearTimeout(this._t);
+          this._t = setTimeout(() => { flag.textContent = 'Guardado ' + new Date().toLocaleTimeString(); }, 400);
+        }
+      };
+      el.addEventListener('change', save);
+      el.addEventListener('input', save);
+    });
+  }
+}
+</script>
+</body>
+</html>
