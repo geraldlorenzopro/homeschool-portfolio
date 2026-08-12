@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Field, FilePreview, Plate, RemoveButton, ViewButton } from '@/components/ui'
+import { Field, FilePlate, FilePreview, RemoveButton, ViewButton } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { fileSizeLabel, fmtDate } from '@/lib/format'
-import { isImage, isPdf } from '@/lib/image'
 import type { Attachment, Student, StudentField } from '@/lib/types'
 
 type Patch = Partial<Omit<Student, 'id'>>
@@ -249,12 +248,13 @@ export function ProfileSection({
         >
           {docs.map((doc) => (
             <figure key={doc.id} className="figure">
-              <Plate
-                url={isImage(doc.mime) ? doc.url : null}
-                height="150px"
-                alt={doc.title}
-                zoomable={isImage(doc.mime)}
-                placeholder={isPdf(doc.mime) ? 'PDF document attached' : 'document attached'}
+              <FilePlate
+                url={doc.url}
+                mime={doc.mime}
+                title={doc.title}
+                height="170px"
+                fit="contain"
+                placeholder="no file attached"
               />
               <figcaption style={{ fontSize: 13, lineHeight: 1.45 }}>
                 <div>{doc.title}</div>

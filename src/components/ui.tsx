@@ -1,6 +1,7 @@
 import { Eye } from 'lucide-react'
 import { useId, useState, type ReactNode } from 'react'
-import { isPdf } from '@/lib/image'
+import { PdfPages, PdfThumb } from '@/components/PdfPages'
+import { isImage, isPdf } from '@/lib/image'
 
 export function Field({
   label,
@@ -56,33 +57,109 @@ export function PlaceholderBox({ label, height }: { label: string; height: strin
 export function Lightbox({
   url,
   alt,
+  mime,
   onClose,
 }: {
   url: string
   alt: string
+  mime?: string | null
   onClose: () => void
 }) {
+  const pdf = isPdf(mime)
   return (
     <div
       className="dialog-backdrop no-print"
       role="dialog"
       aria-modal="true"
       aria-label={alt || 'Full size preview'}
-      style={{ cursor: 'zoom-out', zIndex: 40 }}
+      style={{ cursor: pdf ? 'default' : 'zoom-out', zIndex: 40, alignItems: 'start' }}
       onClick={onClose}
     >
-      <img
-        src={url}
-        alt={alt}
-        style={{
-          maxWidth: '92vw',
-          maxHeight: '92vh',
-          objectFit: 'contain',
-          boxShadow: 'var(--shadow-lg)',
-          border: '8px solid var(--color-surface)',
-        }}
-      />
+      {pdf ? (
+        // A multi-page document needs to scroll, so it keeps its own click.
+        <div
+          className="lightbox-doc"
+          onClick={(e) => e.stopPropagation()}
+          role="document"
+          aria-label={alt}
+        >
+          <div className="lightbox-doc-bar">
+            <span>{alt}</span>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
+              Close
+            </button>
+          </div>
+          <PdfPages url={url} label={alt} />
+        </div>
+      ) : (
+        <img
+          src={url}
+          alt={alt}
+          style={{
+            maxWidth: '92vw',
+            maxHeight: '92vh',
+            objectFit: 'contain',
+            boxShadow: 'var(--shadow-lg)',
+            border: '8px solid var(--color-surface)',
+            margin: 'auto',
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+/**
+ * A file shown as itself: photographs as pictures, PDFs as their first page.
+ * Clicking opens the whole thing — the point being that a card should show the
+ * document, not a note saying one is attached.
+ */
+export function FilePlate({
+  url,
+  mime,
+  title,
+  height,
+  placeholder,
+  fit = 'cover',
+}: {
+  url: string | null
+  mime: string | null
+  title: string
+  height: string
+  placeholder: string
+  fit?: 'cover' | 'contain'
+}) {
+  const [open, setOpen] = useState(false)
+
+  if (!url || (!isImage(mime) && !isPdf(mime))) {
+    return (
+      <div className="plate" style={{ padding: 0 }}>
+        <PlaceholderBox label={placeholder} height={height} />
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div
+        className="plate"
+        style={{ height, padding: 0, cursor: 'zoom-in', overflow: 'hidden' }}
+        onClick={() => setOpen(true)}
+        title={`View ${title}`}
+      >
+        {isPdf(mime) ? (
+          <PdfThumb url={url} height={height} />
+        ) : (
+          <img
+            src={url}
+            alt={title}
+            loading="lazy"
+            style={{ width: '100%', height: '100%', objectFit: fit, display: 'block' }}
+          />
+        )}
+      </div>
+      {open && <Lightbox url={url} alt={title} mime={mime} onClose={() => setOpen(false)} />}
+    </>
   )
 }
 
@@ -104,21 +181,6 @@ export function ViewButton({
 
   const label = `View ${title}`
 
-  if (isPdf(mime)) {
-    return (
-      <a
-        className="btn btn-ghost btn-icon"
-        href={url}
-        target="_blank"
-        rel="noreferrer"
-        title={label}
-        aria-label={label}
-      >
-        <Eye size={15} />
-      </a>
-    )
-  }
-
   return (
     <>
       <button
@@ -130,7 +192,7 @@ export function ViewButton({
       >
         <Eye size={15} />
       </button>
-      {open && <Lightbox url={url} alt={title} onClose={() => setOpen(false)} />}
+      {open && <Lightbox url={url} alt={title} mime={mime} onClose={() => setOpen(false)} />}
     </>
   )
 }

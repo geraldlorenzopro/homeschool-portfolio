@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { RowActions } from '@/components/RowActions'
 import { useInlineEdit } from '@/components/useInlineEdit'
-import { EmptyState, Field, FilePreview, Plate, ViewButton } from '@/components/ui'
+import { EmptyState, Field, FilePlate, FilePreview, ViewButton } from '@/components/ui'
 import { useAction } from '@/data/store'
 import { fileSizeLabel, fmtDate, today } from '@/lib/format'
 import { isImage, isPdf } from '@/lib/image'
@@ -143,15 +143,15 @@ export function SupportDocsSection({ rows }: { rows: SupportDocument[] }) {
         >
           {rows.map((row) => {
             const editing = edit.isEditing(row.id)
-            const image = isImage(row.mime) && row.url
             return (
               <figure key={row.id} className="figure">
-                <Plate
-                  url={image ? row.url : null}
-                  height="150px"
-                  alt={row.title}
-                  zoomable={Boolean(image)}
-                  placeholder={isPdf(row.mime) ? 'PDF document attached' : 'document attached'}
+                <FilePlate
+                  url={row.url}
+                  mime={row.mime}
+                  title={row.title}
+                  height="170px"
+                  fit="contain"
+                  placeholder="no file attached"
                 />
                 {editing && edit.draft ? (
                   <div className="edit-grid">

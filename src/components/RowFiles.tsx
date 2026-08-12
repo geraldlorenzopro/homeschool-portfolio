@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Plate, ViewButton } from '@/components/ui'
+import { FilePlate, ViewButton } from '@/components/ui'
 import type { Attachment, AttachmentOwner } from '@/lib/types'
 
 /**
@@ -26,7 +26,14 @@ export function RowFiles({
       {files.map((f) => (
         <span key={f.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
           <span style={{ width: 34, height: 34, display: 'inline-block' }}>
-            <Plate url={f.url} height="34px" alt={f.title} placeholder="file" />
+            <FilePlate
+              url={f.url}
+              mime={f.mime}
+              title={f.title}
+              height="34px"
+              fit="contain"
+              placeholder="file"
+            />
           </span>
           <ViewButton url={f.url} mime={f.mime} title={f.title} />
           <button

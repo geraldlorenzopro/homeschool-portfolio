@@ -12,8 +12,41 @@ const MAX_PAGES = 12
 /** Rendered wide enough to stay sharp on paper at roughly 150 dpi. */
 const RENDER_WIDTH = 1100
 
+/** Draws `count` pages of a PDF into `host`. Returns the document's page total. */
+async function drawPages(
+  url: string,
+  host: HTMLElement,
+  count: number,
+  width: number,
+  onPage: (n: number) => void,
+  cancelled: () => boolean,
+): Promise<number> {
+  const doc = await pdfjs.getDocument({ url }).promise
+  if (cancelled()) return doc.numPages
+  const shown = Math.min(doc.numPages, count)
+
+  for (let n = 1; n <= shown; n++) {
+    const page = await doc.getPage(n)
+    if (cancelled()) return doc.numPages
+
+    const base = page.getViewport({ scale: 1 })
+    const viewport = page.getViewport({ scale: width / base.width })
+    const canvas = document.createElement('canvas')
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+    const context = canvas.getContext('2d')
+    if (!context) continue
+
+    await page.render({ canvas, canvasContext: context, viewport }).promise
+    if (cancelled()) return doc.numPages
+    host.appendChild(canvas)
+    onPage(n)
+  }
+  return doc.numPages
+}
+
 /**
- * Draws an uploaded PDF into the document so the evaluator actually sees it.
+ * Draws an uploaded PDF so the evaluator actually sees it.
  *
  * An <embed> or <iframe> is not an option: browsers do not paginate embedded
  * PDFs into the printed output, so the page would come out blank. Canvases
@@ -26,52 +59,30 @@ export function PdfPages({ url, label }: { url: string; label: string }) {
   const [total, setTotal] = useState(0)
 
   useEffect(() => {
-    let cancelled = false
+    let stopped = false
     const container = host.current
     if (!container) return
 
-    async function render() {
-      try {
-        const doc = await pdfjs.getDocument({ url }).promise
-        if (cancelled) return
-        setTotal(doc.numPages)
-        const shown = Math.min(doc.numPages, MAX_PAGES)
-
-        for (let n = 1; n <= shown; n++) {
-          const page = await doc.getPage(n)
-          if (cancelled) return
-
-          const base = page.getViewport({ scale: 1 })
-          const viewport = page.getViewport({ scale: RENDER_WIDTH / base.width })
-          const canvas = document.createElement('canvas')
-          canvas.width = viewport.width
-          canvas.height = viewport.height
-          const context = canvas.getContext('2d')
-          if (!context) continue
-
-          await page.render({ canvas, canvasContext: context, viewport }).promise
-          if (cancelled) return
-          container!.appendChild(canvas)
-          setPages(n)
+    drawPages(url, container, MAX_PAGES, RENDER_WIDTH, setPages, () => stopped)
+      .then((n) => {
+        if (!stopped) {
+          setTotal(n)
+          setState('ready')
         }
-        if (!cancelled) setState('ready')
-      } catch {
-        if (!cancelled) setState('failed')
-      }
-    }
+      })
+      .catch(() => {
+        if (!stopped) setState('failed')
+      })
 
-    render()
     return () => {
-      cancelled = true
+      stopped = true
       container.replaceChildren()
     }
   }, [url])
 
   return (
     <div>
-      {state === 'loading' && (
-        <p className="pdf-note">Rendering {label}…</p>
-      )}
+      {state === 'loading' && <p className="pdf-note">Rendering {label}…</p>}
       {state === 'failed' && (
         <p className="pdf-note">
           {label} could not be rendered here. The file itself is still attached to this
@@ -85,5 +96,39 @@ export function PdfPages({ url, label }: { url: string; label: string }) {
       )}
       <div className="pdf-pages" ref={host} />
     </div>
+  )
+}
+
+/**
+ * The first page of a PDF, sized like a photograph's thumbnail — so a card
+ * shows the document itself rather than a placeholder that says one exists.
+ */
+export function PdfThumb({ url, height }: { url: string; height: string }) {
+  const host = useRef<HTMLDivElement>(null)
+  const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading')
+
+  useEffect(() => {
+    let stopped = false
+    const container = host.current
+    if (!container) return
+
+    drawPages(url, container, 1, 700, () => {}, () => stopped)
+      .then(() => !stopped && setState('ready'))
+      .catch(() => !stopped && setState('failed'))
+
+    return () => {
+      stopped = true
+      container.replaceChildren()
+    }
+  }, [url])
+
+  return (
+    <div
+      className="pdf-thumb"
+      data-state={state}
+      style={{ height }}
+      ref={host}
+      aria-label={state === 'ready' ? 'First page' : 'PDF preview'}
+    />
   )
 }

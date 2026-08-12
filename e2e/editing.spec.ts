@@ -109,3 +109,73 @@ test.describe('Counts and completeness', () => {
     await expect(sectionCount(app, 'Goals')).toHaveText('5')
   })
 })
+
+test.describe('Adding rows', () => {
+  /**
+   * Every add button, end to end. The curriculum case shipped broken because
+   * nothing exercised it — the row silently failed to save.
+   */
+  test('curriculum adds, persists and keeps its area', async ({ app }) => {
+    await openSection(app, 'Curriculum used')
+    await app.getByLabel('Curriculum or program').fill('Singapore Math 1A')
+    await app.getByLabel('Publisher or author').fill('Marshall Cavendish')
+    await app.getByLabel('Area', { exact: true }).selectOption({ label: 'Mathematics' })
+    await app.getByLabel('How it was used').fill('Second half of the year')
+    await app.getByRole('button', { name: 'Add curriculum' }).click()
+
+    const added = row(app, 'Singapore Math 1A')
+    await expect(added).toBeVisible()
+    await expect(added).toContainText('Marshall Cavendish')
+    await expect(added).toContainText('Mathematics')
+    await expect(sectionCount(app, 'Curriculum used')).toHaveText('5')
+
+    await app.reload()
+    await openSection(app, 'Curriculum used')
+    await expect(row(app, 'Singapore Math 1A')).toContainText('Mathematics')
+  })
+
+  test('every add button saves and survives a reload', async ({ app }) => {
+    const added: [string, string][] = []
+
+    await openSection(app, 'Areas')
+    await app.getByLabel('New area').fill('Music')
+    await app.getByRole('button', { name: '+ Add area' }).click()
+    added.push(['Areas', 'Music'])
+
+    await openSection(app, 'Goals')
+    await app.getByLabel('Goal', { exact: true }).fill('Will keep a steady beat.')
+    await app.getByRole('button', { name: 'Add goal' }).click()
+    added.push(['Goals', 'steady beat'])
+
+    await openSection(app, 'Language Arts')
+    await app.getByLabel('What was covered').fill('Blending practice')
+    await app.getByRole('button', { name: 'Add entry' }).click()
+    added.push(['Language Arts', 'Blending practice'])
+
+    await openSection(app, 'Evaluations')
+    await app.getByLabel('Evaluation title').fill('Annual OT review')
+    await app.getByRole('button', { name: 'Add evaluation' }).click()
+    added.push(['Evaluations', 'Annual OT review'])
+
+    await openSection(app, 'Reading list')
+    await app.getByLabel('Title').fill('Make Way for Ducklings')
+    await app.getByRole('button', { name: 'Add book' }).click()
+    added.push(['Reading list', 'Make Way for Ducklings'])
+
+    await openSection(app, 'Work samples')
+    await app.getByLabel('What the work is').fill('Rhythm chart')
+    await app.getByRole('button', { name: 'Add sample' }).click()
+    added.push(['Work samples', 'Rhythm chart'])
+
+    await openSection(app, 'Support documents (IEP)')
+    await app.getByLabel('Document title').fill('Service log')
+    await app.getByRole('button', { name: 'Attach document' }).click()
+    added.push(['Support documents (IEP)', 'Service log'])
+
+    await app.reload()
+    for (const [section, text] of added) {
+      await openSection(app, section)
+      await expect(app.getByText(text, { exact: false }).first(), `${section} lost "${text}"`).toBeVisible()
+    }
+  })
+})

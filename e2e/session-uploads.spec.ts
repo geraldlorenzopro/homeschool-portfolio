@@ -101,7 +101,7 @@ test.describe('The eye button', () => {
     await expect(zoom.locator('img')).toHaveAttribute('src', /^data:image\/jpeg/)
   })
 
-  test('sends a PDF to a new tab rather than a lightbox', async ({ app }) => {
+  test('opens a PDF in the viewer, without leaving the page', async ({ app }) => {
     await openSection(app, 'Support documents (IEP)')
     await app.getByLabel('Document title').fill('Plan as PDF')
     await app.getByLabel('File (PDF or image)').setInputFiles({
@@ -112,10 +112,10 @@ test.describe('The eye button', () => {
     await app.getByRole('button', { name: 'Attach document' }).click()
 
     const figure = app.locator('figure', { hasText: 'Plan as PDF' })
-    const eye = figure.getByRole('link', { name: /^View / })
-    await expect(eye).toBeVisible()
-    await expect(eye).toHaveAttribute('target', '_blank')
-    await expect(eye).toHaveAttribute('rel', /noreferrer/)
+    await figure.getByRole('button', { name: /^View / }).click()
+    await expect(app.getByRole('dialog').locator('.pdf-pages canvas').first()).toBeVisible({
+      timeout: 15_000,
+    })
   })
 
   test('is absent where there is no file to view', async ({ app }) => {
@@ -140,7 +140,7 @@ test.describe('Files on curriculum and reading list rows', () => {
       buffer: PDF_MIN,
     })
 
-    await expect(target.getByRole('link', { name: /^View / })).toBeVisible()
+    await expect(target.getByRole('button', { name: /^View / })).toBeVisible()
     await expect(target.getByRole('button', { name: '+ Add another document' })).toBeVisible()
   })
 

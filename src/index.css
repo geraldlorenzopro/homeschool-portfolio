@@ -413,6 +413,58 @@ input[type='file'].input { padding: 6px; font-size: 12px; }
   margin: 0 0 6pt;
 }
 
+/* A PDF's first page, standing in for the thumbnail a photograph gets. Top
+   aligned so the letterhead shows rather than the middle of the page. */
+.pdf-thumb {
+  width: 100%;
+  overflow: hidden;
+  background: var(--color-neutral-100);
+  display: block;
+}
+.pdf-thumb canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.pdf-thumb[data-state='loading']::after,
+.pdf-thumb[data-state='failed']::after {
+  content: 'Loading document…';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--color-neutral-600);
+}
+.pdf-thumb[data-state='failed']::after { content: 'Document attached'; }
+
+/* Full-size PDF view. Scrolls on its own, so the backdrop click that closes an
+   image would fight it — the document keeps its own click and gets a Close. */
+.lightbox-doc {
+  width: min(920px, 94vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  margin: 4vh auto;
+  padding: 16px;
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  cursor: default;
+}
+.lightbox-doc-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+.lightbox-doc .pdf-pages canvas {
+  border: 1px solid var(--color-divider);
+}
+
 /* ── print: only the document survives ──────────────────────────────────── */
 
 @media print {
