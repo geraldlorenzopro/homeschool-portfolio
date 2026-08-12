@@ -32,8 +32,14 @@ export function hoursOf(entry: Entry): number {
   return parseFloat(entry.hours) || 0
 }
 
+/**
+ * Rounded, because this number goes straight into the printed record. A year
+ * of short sessions — 0.43 h, 0.2 h, 0.35 h — sums in binary floating point to
+ * 12.280000000000001, and that is what the evaluator would have read.
+ */
 export function sumHours(entries: Entry[]): number {
-  return entries.reduce((n, e) => n + hoursOf(e), 0)
+  const total = entries.reduce((n, e) => n + hoursOf(e), 0)
+  return Math.round(total * 100) / 100
 }
 
 export function fileSizeLabel(bytes: number | null | undefined): string {
