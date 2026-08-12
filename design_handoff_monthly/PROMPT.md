@@ -52,7 +52,7 @@ Una app donde ella entre con su correo, vea a sus hijos, y para cada año escola
 6. **Impresión**: una ruta `/print/[schoolYearId]` que renderiza las 31 hojas con `@page { margin: 0 }`,
    una hoja por página, sin la interfaz. Debe verse igual que el HTML de referencia.
 7. **Importador de Time4Learning**: acepta el PDF, extrae las filas, muestra una previsualización
-   editable y solo entonces escribe en la base. Usa el reporte de `reference/` como fixture y los
+   editable y solo entonces escribe en la base. Usa un reporte de la plataforma como fixture (fuera del repositorio) y los
    datos ya extraídos de la tabla del README como test de regresión.
 8. **Siembra** la base con los datos reales de la familia (están en el README y en el HTML) para que
    ella entre y ya vea su año 2025–2026 con enero a junio llenos.

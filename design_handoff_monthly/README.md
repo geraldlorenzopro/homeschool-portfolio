@@ -129,7 +129,7 @@ Reglas de negocio que la app debe respetar:
 
 ## Importador de Time4Learning
 
-La madre exporta un PDF de reportes de Time4Learning (ejemplo real en `reference/`). Es un PDF
+La madre exporta un PDF de reportes de Time4Learning. Es un PDF
 **escaneado (imagen)**, sin capa de texto: hay que pasarlo por OCR o pedir el CSV/export de la
 plataforma. Del reporte se sacan filas `{ actividad, fecha, hora, score, duración }` agrupadas por
 `Chapter: … (Math, K)` / `(Language Arts, K)`.
@@ -192,7 +192,7 @@ Foco de teclado: `outline: 2px solid var(--color-accent); outline-offset: 2px`.
 - Foto de portada: la sube la usuaria (hoy es un placeholder). En la app va a Storage.
 - Iconos: Lucide.
 - Fuentes: Cormorant Garamond y Lora desde Google Fonts.
-- `reference/original portfolio packet.pdf` — el paquete original de FLHomeschoolEvaluations.com
+- El paquete original de FLHomeschoolEvaluations.com (fuera del repositorio, ver más abajo)
   del que salió la estructura. Sirve como referencia de contenido legal; **no copiar su diseño**.
 
 ## Archivos de este bundle
@@ -202,9 +202,14 @@ design/Home Education Portfolio 2025-2026.dc.html   El portafolio (31 páginas)
 design/Guia para llenar el portafolio.dc.html       La guía en español (6 páginas)
 design/_ds/classical-*/styles.css                   Tokens y clases del sistema visual
 design/doc-page.js, image-slot.js, support.js       Runtime del prototipo — NO portar
-reference/Sofía Time4Learning report.pdf          Reporte real para el importador
-reference/original portfolio packet.pdf             Paquete original de referencia
 supabase/schema.sql                                 Esquema + RLS listo para aplicar
 PROMPT.md                                           El prompt para pegar en Claude Code
 .env.example                                        Variables de entorno
 ```
+
+## Los documentos reales
+
+El reporte de Time4Learning y el paquete original del portafolio son documentos de una menor
+y **no viven en este repositorio**, que es público. Están fuera de él, en la máquina de quien
+lo mantiene, y `design_handoff_monthly/reference/` está en `.gitignore` para que no vuelvan a
+entrar por descuido. Los datos reales viven en Supabase, detrás de RLS y en buckets privados.
