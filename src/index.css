@@ -769,6 +769,51 @@ textarea.lined {
   padding: 0;
 }
 .log-subject-input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+
+/* A field inside a printed table. Borderless, because on paper it is not a
+   field at all — it is the sentence someone wrote. */
+.cell-input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--color-text);
+  padding: 2px 0;
+}
+.cell-input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+
+/* ── work samples, in the monthly portfolio ─────────────────────────────── */
+
+.sample-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 18px;
+  margin-top: 16px;
+}
+.sample-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  break-inside: avoid;
+}
+.sample-meta {
+  font-size: 10.5px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.drop-zone {
+  border: 1px dashed var(--color-divider);
+  border-radius: var(--radius-md);
+  padding: 22px;
+  text-align: center;
+  cursor: pointer;
+  display: block;
+}
+.drop-zone:hover,
+.drop-zone[data-over='true'] {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+.drop-zone input[type='file'] { display: none; }
 .log-day {
   border-left: 1px solid var(--color-divider);
   text-align: center;

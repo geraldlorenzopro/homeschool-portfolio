@@ -60,6 +60,33 @@ export interface MonthRecord {
   marks: Record<number, number[]>
 }
 
+/** A book, a programme, a website — whatever the year was taught with. */
+export interface MonthlyCurriculum {
+  id: string
+  title: string
+  publisher: string
+  subject: string
+  usage: string
+  sort: number
+}
+
+/** One piece of the child's work: a photo of a page, or a scanned PDF. */
+export interface MonthlySample {
+  id: string
+  title: string
+  subject: string
+  /** '2026-01' when it belongs to a month, '' when it stands on its own. */
+  month: string
+  sample_date: string
+  note: string
+  file_name: string
+  mime: string | null
+  size_bytes: number | null
+  sort: number
+  /** Signed URL (Supabase) or data URL (demo mode). Null when the file is gone. */
+  url: string | null
+}
+
 export interface MonthlyYear {
   label: string
   parent_name: string
@@ -78,6 +105,8 @@ export interface MonthlyYear {
   /** Row ids behind the subjects, empty in the demo backend. */
   subject_ids: string[]
   months: Record<string, MonthRecord>
+  curriculums: MonthlyCurriculum[]
+  samples: MonthlySample[]
 }
 
 export function blankMonth(): MonthRecord {
@@ -102,5 +131,7 @@ export function blankYear(): MonthlyYear {
     subjects: [...DEFAULT_SUBJECTS],
     subject_ids: [],
     months: Object.fromEntries(MONTHS.map((m) => [m.key, blankMonth()])),
+    curriculums: [],
+    samples: [],
   }
 }

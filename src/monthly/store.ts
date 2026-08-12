@@ -1,8 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useToast } from '@/components/Toaster'
 import { blankYear, type MonthlyYear } from './model'
-import { createMonthlyRepo, type MonthPatch, type YearPatch } from './repo'
+import {
+  createMonthlyRepo,
+  type CurriculumPatch,
+  type MonthPatch,
+  type SamplePatch,
+  type YearPatch,
+} from './repo'
 
 export * from './model'
 
@@ -23,6 +29,7 @@ export function useMonthlyYear(studentId: string) {
   const [pending, setPending] = useState(0)
   const [savedAt, setSavedAt] = useState<Date | null>(null)
   const timers = useRef(new Map<string, number>())
+  const queued = useRef(new Map<string, () => Promise<void>>())
 
   const { data, isLoading, error } = useQuery({
     queryKey: monthlyKey(studentId),
@@ -61,20 +68,52 @@ export function useMonthlyYear(studentId: string) {
         optimistic(next)
         return next
       })
+
+      const run = () => {
+        timers.current.delete(id)
+        queued.current.delete(id)
+        return persist()
+          .then(() => setSavedAt(new Date()))
+          .catch((e: Error) => toast(e.message))
+          .finally(() => setPending((n) => Math.max(0, n - 1)))
+      }
+
+      // One count per field, not per keystroke. Replacing a timer that has not
+      // fired yet replaces a write that never happened, and counting it again
+      // left the indicator reading "Saving…" for the rest of the session.
+      if (!timers.current.has(id)) setPending((n) => n + 1)
       window.clearTimeout(timers.current.get(id))
-      setPending((n) => n + 1)
-      timers.current.set(
-        id,
-        window.setTimeout(() => {
-          persist()
-            .then(() => setSavedAt(new Date()))
-            .catch((e: Error) => toast(e.message))
-            .finally(() => setPending((n) => Math.max(0, n - 1)))
-        }, 500),
-      )
+      queued.current.set(id, run)
+      timers.current.set(id, window.setTimeout(run, 500))
     },
     [queryClient, studentId, toast],
   )
+
+  /**
+   * Send whatever is still waiting, now.
+   *
+   * Half a second of debounce is invisible until the moment it is not: closing
+   * the tab, or switching to another page of the portfolio, threw away the last
+   * thing typed. Both the unmount and `pagehide` land here.
+   */
+  const flushAll = useCallback(() => {
+    for (const timer of timers.current.values()) window.clearTimeout(timer)
+    timers.current.clear()
+    const waiting = [...queued.current.values()]
+    queued.current.clear()
+    for (const run of waiting) void run()
+  }, [])
+
+  const flushRef = useRef(flushAll)
+  flushRef.current = flushAll
+  useEffect(() => {
+    const onHide = () => flushRef.current()
+    window.addEventListener('pagehide', onHide)
+    return () => {
+      window.removeEventListener('pagehide', onHide)
+      flushRef.current()
+    }
+  }, [])
 
   const updateYear = useCallback(
     (patch: YearPatch, immediate = false) => {
@@ -124,6 +163,73 @@ export function useMonthlyYear(studentId: string) {
     [repo, studentId, writeDebounced],
   )
 
+  /**
+   * For the writes that create or delete a row. The id comes from the server,
+   * so there is nothing honest to paint first — this one waits, then refetches.
+   * It refetches after a failure too: a batch of files can half succeed, and
+   * what did upload is already saved.
+   */
+  const run = useCallback(
+    (work: () => Promise<void>) => {
+      setPending((n) => n + 1)
+      return work()
+        .then(() => setSavedAt(new Date()))
+        .catch((e: Error) => toast(e.message))
+        .finally(() => {
+          setPending((n) => Math.max(0, n - 1))
+          queryClient.invalidateQueries({ queryKey: monthlyKey(studentId) })
+        })
+    },
+    [queryClient, studentId, toast],
+  )
+
+  const addCurriculum = useCallback(
+    () => run(() => repo.addCurriculum(studentId)),
+    [repo, run, studentId],
+  )
+
+  const setCurriculum = useCallback(
+    (id: string, patch: CurriculumPatch) =>
+      writeDebounced(
+        `curriculum:${id}:${Object.keys(patch).join(',')}`,
+        (d) => {
+          const row = d.curriculums.find((c) => c.id === id)
+          if (row) Object.assign(row, patch)
+        },
+        () => repo.setCurriculum(studentId, id, patch),
+      ),
+    [repo, studentId, writeDebounced],
+  )
+
+  const removeCurriculum = useCallback(
+    (id: string) => run(() => repo.removeCurriculum(studentId, id)),
+    [repo, run, studentId],
+  )
+
+  const addSamples = useCallback(
+    (files: File[], patch?: SamplePatch) =>
+      files.length ? run(() => repo.addSamples(studentId, files, patch)) : undefined,
+    [repo, run, studentId],
+  )
+
+  const setSample = useCallback(
+    (id: string, patch: SamplePatch) =>
+      writeDebounced(
+        `sample:${id}:${Object.keys(patch).join(',')}`,
+        (d) => {
+          const row = d.samples.find((w) => w.id === id)
+          if (row) Object.assign(row, patch)
+        },
+        () => repo.setSample(studentId, id, patch),
+      ),
+    [repo, studentId, writeDebounced],
+  )
+
+  const removeSample = useCallback(
+    (id: string) => run(() => repo.removeSample(studentId, id)),
+    [repo, run, studentId],
+  )
+
   const setCoverPhoto = useMutation({
     mutationFn: (file: File) => repo.setCoverPhoto(studentId, file),
     onSuccess: () => {
@@ -142,6 +248,12 @@ export function useMonthlyYear(studentId: string) {
     toggleDay,
     setMonth,
     setCoverPhoto: setCoverPhoto.mutate,
+    addCurriculum,
+    setCurriculum,
+    removeCurriculum,
+    addSamples,
+    setSample,
+    removeSample,
     savedAt,
     dirty: pending > 0,
   }

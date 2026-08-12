@@ -53,7 +53,13 @@ test.describe('The monthly log', () => {
     await expect(page_(app, 'June 2026')).toBeVisible()
     // The school year ends in June, so there is no July sheet to leave blank.
     await expect(page_(app, 'July 2026')).toHaveCount(0)
-    await expect(app.locator('.section-link')).toHaveCount(14) // cover + record + child + 11
+
+    // cover + record + child + 11 months + curriculum + work samples
+    await expect(app.locator('.section-link')).toHaveCount(16)
+    const links = app.locator('.section-link')
+    await expect(links.nth(13)).toContainText('June 2026')
+    await expect(links.nth(14)).toContainText('Curriculums used')
+    await expect(links.nth(15)).toContainText('Work samples')
   })
 
   test('a ticked day saves and survives a reload', async ({ app }) => {

@@ -6,9 +6,17 @@ import {
 } from '@/lib/supabase'
 import { prepareUpload } from '@/lib/upload'
 import { readAsDataUrl } from '@/lib/image'
-import { MONTHS, blankYear, type MonthlyYear, type MonthRecord } from './model'
+import {
+  MONTHS,
+  blankYear,
+  type MonthlyCurriculum,
+  type MonthlySample,
+  type MonthlyYear,
+  type MonthRecord,
+} from './model'
 
 const PHOTO_BUCKET = 'portfolio-photos'
+const SAMPLE_BUCKET = 'portfolio-work-samples'
 const LOCAL_KEY = 'homeschool-monthly-fl-v1'
 const YEAR_LABEL = '2025–2026'
 
@@ -17,6 +25,8 @@ export type YearPatch = Partial<
   Omit<MonthlyYear, 'subjects' | 'subject_ids' | 'months' | 'cover_photo' | 'label'>
 >
 export type MonthPatch = Partial<Omit<MonthRecord, 'marks'>>
+export type CurriculumPatch = Partial<Omit<MonthlyCurriculum, 'id'>>
+export type SamplePatch = Partial<Omit<MonthlySample, 'id' | 'url'>>
 
 /**
  * Writes are granular on purpose. The portfolio is filled in across twelve
@@ -37,6 +47,29 @@ export interface MonthlyRepo {
   ): Promise<void>
   setMonth(studentId: string, monthKey: string, patch: MonthPatch): Promise<void>
   setCoverPhoto(studentId: string, file: File): Promise<void>
+
+  addCurriculum(studentId: string): Promise<void>
+  setCurriculum(studentId: string, id: string, patch: CurriculumPatch): Promise<void>
+  removeCurriculum(studentId: string, id: string): Promise<void>
+
+  /**
+   * One row per file, in the order they were chosen. The picker takes a whole
+   * folder at once; each file is still prepared, uploaded and filed on its own,
+   * so one bad file cannot take the rest of the batch down with it.
+   */
+  addSamples(studentId: string, files: File[], patch?: SamplePatch): Promise<void>
+  setSample(studentId: string, id: string, patch: SamplePatch): Promise<void>
+  removeSample(studentId: string, id: string): Promise<void>
+}
+
+const uid = () => crypto.randomUUID()
+
+const nextSort = (rows: { sort: number }[]) =>
+  rows.reduce((n, r) => Math.max(n, r.sort ?? 0), 0) + 1
+
+/** "worksheet-3.pdf" → "worksheet 3", so a fresh row is never nameless. */
+function titleFromFile(file: File): string {
+  return file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || 'Work sample'
 }
 
 /** "2026-01" + 14 → "2026-01-14", the shape activity_log stores. */
@@ -109,6 +142,73 @@ function createLocalMonthlyRepo(): MonthlyRepo {
         d.cover_photo = url
       })
     },
+
+    async addCurriculum(_s) {
+      await mutate((d) => {
+        d.curriculums.push({
+          id: uid(),
+          title: '',
+          publisher: '',
+          subject: '',
+          usage: '',
+          sort: nextSort(d.curriculums),
+        })
+      })
+    },
+    async setCurriculum(_s, id, patch) {
+      await mutate((d) => {
+        const row = d.curriculums.find((c) => c.id === id)
+        if (row) Object.assign(row, patch)
+      })
+    },
+    async removeCurriculum(_s, id) {
+      await mutate((d) => {
+        d.curriculums = d.curriculums.filter((c) => c.id !== id)
+      })
+    },
+
+    async addSamples(_s, files, patch) {
+      // Same contract as the Supabase backend: a file that cannot be stored is
+      // reported by name and the rest of the batch still lands. The two used to
+      // differ, and only the one the tests never run would drop the remainder.
+      const failures: string[] = []
+      for (const file of files) {
+        try {
+          const { blob, mime } = await prepareUpload(file)
+          const url = await readAsDataUrl(blob)
+          await mutate((d) => {
+            d.samples.push({
+              id: uid(),
+              title: titleFromFile(file),
+              subject: '',
+              month: '',
+              sample_date: '',
+              note: '',
+              file_name: file.name,
+              mime,
+              size_bytes: blob.size,
+              sort: nextSort(d.samples),
+              url,
+              ...patch,
+            })
+          })
+        } catch (e) {
+          failures.push(`${file.name}: ${(e as Error).message}`)
+        }
+      }
+      if (failures.length) throw new Error(failures.join('\n'))
+    },
+    async setSample(_s, id, patch) {
+      await mutate((d) => {
+        const row = d.samples.find((w) => w.id === id)
+        if (row) Object.assign(row, patch)
+      })
+    },
+    async removeSample(_s, id) {
+      await mutate((d) => {
+        d.samples = d.samples.filter((w) => w.id !== id)
+      })
+    },
   }
 }
 
@@ -119,6 +219,22 @@ function fail(error: { message: string } | null): void {
 }
 
 const str = (v: unknown): string => (v == null ? '' : String(v))
+
+/** The last sort in a list, so a new row lands at the end and never ties. */
+async function nextSortIn(
+  db: ReturnType<AppSupabaseClient['schema']>,
+  table: 'curriculums' | 'work_samples',
+  yearId: string,
+): Promise<number> {
+  const { data } = await db
+    .from(table)
+    .select('sort')
+    .eq('school_year_id', yearId)
+    .order('sort', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return ((data?.sort as number | undefined) ?? 0) + 1
+}
 
 function createSupabaseMonthlyRepo(sb: AppSupabaseClient): MonthlyRepo {
   // Everything in this schema is reached through the year, so it is worth
@@ -168,14 +284,18 @@ function createSupabaseMonthlyRepo(sb: AppSupabaseClient): MonthlyRepo {
     async load(studentId) {
       const yearId = await ensureYear(studentId)
 
-      const [yearRes, subjectsRes, notesRes] = await Promise.all([
+      const [yearRes, subjectsRes, notesRes, curriculumsRes, samplesRes] = await Promise.all([
         db.from('school_years').select('*').eq('id', yearId).single(),
         db.from('subjects').select('id, label, sort').eq('school_year_id', yearId).order('sort'),
         db.from('monthly_notes').select('*').eq('school_year_id', yearId),
+        db.from('curriculums').select('*').eq('school_year_id', yearId).order('sort'),
+        db.from('work_samples').select('*').eq('school_year_id', yearId).order('sort'),
       ])
       fail(yearRes.error)
       fail(subjectsRes.error)
       fail(notesRes.error)
+      fail(curriculumsRes.error)
+      fail(samplesRes.error)
 
       const subjects = subjectsRes.data ?? []
       const ids = subjects.map((s) => s.id as string)
@@ -230,6 +350,44 @@ function createSupabaseMonthlyRepo(sb: AppSupabaseClient): MonthlyRepo {
       for (const month of Object.values(year.months)) {
         for (const list of Object.values(month.marks)) list.sort((a, b) => a - b)
       }
+
+      year.curriculums = (curriculumsRes.data ?? []).map((c) => ({
+        id: c.id as string,
+        title: str(c.title),
+        publisher: str(c.publisher),
+        subject: str(c.subject),
+        usage: str(c.usage),
+        sort: Number(c.sort ?? 0),
+      }))
+
+      // One request for the whole batch; a signed URL per file would be a
+      // round trip per sample, and a year of them is a slow page.
+      const paths = (samplesRes.data ?? [])
+        .map((w) => w.storage_path as string | null)
+        .filter((path): path is string => Boolean(path))
+      const signed = new Map<string, string>()
+      if (paths.length) {
+        const res = await sb.storage
+          .from(SAMPLE_BUCKET)
+          .createSignedUrls(paths, SIGNED_URL_TTL_SECONDS)
+        for (const item of res.data ?? []) {
+          if (item.path && item.signedUrl) signed.set(item.path, item.signedUrl)
+        }
+      }
+
+      year.samples = (samplesRes.data ?? []).map((w) => ({
+        id: w.id as string,
+        title: str(w.title),
+        subject: str(w.subject),
+        month: str(w.month),
+        sample_date: str(w.sample_date),
+        note: str(w.note),
+        file_name: str(w.file_name),
+        mime: (w.mime as string | null) ?? null,
+        size_bytes: (w.size_bytes as number | null) ?? null,
+        sort: Number(w.sort ?? 0),
+        url: w.storage_path ? (signed.get(w.storage_path as string) ?? null) : null,
+      }))
 
       return year
     },
@@ -312,6 +470,75 @@ function createSupabaseMonthlyRepo(sb: AppSupabaseClient): MonthlyRepo {
 
       const old = previous.data?.cover_photo_path as string | null
       if (old) await sb.storage.from(PHOTO_BUCKET).remove([old])
+    },
+
+    async addCurriculum(studentId) {
+      const yearId = await ensureYear(studentId)
+      fail(
+        (
+          await db.from('curriculums').insert({
+            school_year_id: yearId,
+            sort: await nextSortIn(db, 'curriculums', yearId),
+          })
+        ).error,
+      )
+    },
+    async setCurriculum(_studentId, id, patch) {
+      fail((await db.from('curriculums').update(patch).eq('id', id)).error)
+    },
+    async removeCurriculum(_studentId, id) {
+      fail((await db.from('curriculums').delete().eq('id', id)).error)
+    },
+
+    async addSamples(studentId, files, patch) {
+      const yearId = await ensureYear(studentId)
+      const { data: userData } = await sb.auth.getUser()
+      const userId = userData.user?.id
+      if (!userId) throw new Error('Not signed in.')
+
+      let sort = await nextSortIn(db, 'work_samples', yearId)
+      const failures: string[] = []
+
+      for (const file of files) {
+        try {
+          const { blob, mime } = await prepareUpload(file)
+          const path = `${userId}/${yearId}/${crypto.randomUUID()}`
+          fail(
+            (await sb.storage.from(SAMPLE_BUCKET).upload(path, blob, { contentType: mime })).error,
+          )
+
+          const inserted = await db.from('work_samples').insert({
+            school_year_id: yearId,
+            title: titleFromFile(file),
+            file_name: file.name,
+            storage_path: path,
+            mime,
+            size_bytes: blob.size,
+            sort: sort++,
+            ...patch,
+          })
+          // The row is what makes the object reachable; without it the upload
+          // is an orphan nobody can see or delete.
+          if (inserted.error) {
+            await sb.storage.from(SAMPLE_BUCKET).remove([path])
+            throw new Error(inserted.error.message)
+          }
+        } catch (e) {
+          failures.push(`${file.name}: ${(e as Error).message}`)
+        }
+      }
+
+      // Whatever did upload is saved and visible; the rest is reported by name.
+      if (failures.length) throw new Error(failures.join('\n'))
+    },
+    async setSample(_studentId, id, patch) {
+      fail((await db.from('work_samples').update(patch).eq('id', id)).error)
+    },
+    async removeSample(_studentId, id) {
+      const found = await db.from('work_samples').select('storage_path').eq('id', id).maybeSingle()
+      fail((await db.from('work_samples').delete().eq('id', id)).error)
+      const path = found.data?.storage_path as string | null
+      if (path) await sb.storage.from(SAMPLE_BUCKET).remove([path])
     },
   }
 }

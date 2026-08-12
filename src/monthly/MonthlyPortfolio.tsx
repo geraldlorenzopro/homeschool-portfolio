@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FilePlate, RemoveButton, ViewButton } from '@/components/ui'
 import type { Student } from '@/lib/types'
 import {
   CHECKLIST_RECOMMENDED,
@@ -9,6 +10,8 @@ import {
   isWeekend,
   weekdayOf,
   useMonthlyYear,
+  type MonthlyCurriculum,
+  type MonthlySample,
   type MonthlyYear,
 } from './store'
 
@@ -31,6 +34,12 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
     setMonth,
     toggleDay,
     setCoverPhoto,
+    addCurriculum,
+    setCurriculum,
+    removeCurriculum,
+    addSamples,
+    setSample,
+    removeSample,
     savedAt,
     dirty,
   } = useMonthlyYear(student.id)
@@ -41,6 +50,8 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
     { key: 'record', label: 'Portfolio record' },
     { key: 'child', label: 'Child’s information' },
     ...MONTHS.map((m) => ({ key: m.key, label: m.label })),
+    { key: 'curriculum', label: 'Curriculums used' },
+    { key: 'samples', label: 'Work samples' },
   ]
 
   const month = MONTHS.find((m) => m.key === page)
@@ -67,7 +78,11 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
           {pages.map((p) => {
             const marks = year.months[p.key]
               ? Object.values(year.months[p.key].marks).reduce((n, d) => n + d.length, 0)
-              : 0
+              : p.key === 'curriculum'
+                ? year.curriculums.length
+                : p.key === 'samples'
+                  ? year.samples.length
+                  : 0
             return (
               <button
                 key={p.key}
@@ -77,7 +92,7 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
                 onClick={() => setPage(p.key)}
               >
                 <span>{p.label}</span>
-                {year.months[p.key] && (
+                {(year.months[p.key] || p.key === 'curriculum' || p.key === 'samples') && (
                   <span className="section-count" data-filled={marks > 0}>
                     {marks}
                   </span>
@@ -128,6 +143,23 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
         {page === 'cover' && <Cover year={year} student={student} update={updateYear} setCoverPhoto={setCoverPhoto} />}
         {page === 'record' && <RecordPage year={year} student={student} update={updateYear} />}
         {page === 'child' && <ChildInfo year={year} student={student} update={updateYear} />}
+        {page === 'curriculum' && (
+          <CurriculumPage
+            year={year}
+            add={addCurriculum}
+            set={setCurriculum}
+            remove={removeCurriculum}
+          />
+        )}
+        {page === 'samples' && (
+          <SamplesPage
+            year={year}
+            add={addSamples}
+            set={setSample}
+            remove={removeSample}
+            busy={dirty}
+          />
+        )}
         {month && (
           <MonthLog
             key={month.key}
@@ -600,6 +632,240 @@ function MonthLog({
       <p className="sheet-footnote">
         Home Education Portfolio · {year.county || 'Broward'} County, Florida — {month.label}
       </p>
+    </section>
+  )
+}
+
+/**
+ * The materials the year was taught with — the statute's "titles of materials
+ * used". Free text on purpose: a Kindergarten year is a reading programme, a
+ * maths app and a library card, and none of them belongs to one subject row.
+ */
+function CurriculumPage({
+  year,
+  add,
+  set,
+  remove,
+}: {
+  year: MonthlyYear
+  add: () => void
+  set: (id: string, patch: Partial<MonthlyCurriculum>) => void
+  remove: (id: string) => void
+}) {
+  return (
+    <section className="sheet doc-sheet">
+      <div className="kicker">Curriculum &amp; Materials Used</div>
+      <h2 className="sheet-title" style={{ fontSize: 34, margin: '6px 0 0' }}>
+        Curriculums used
+      </h2>
+      <p className="sheet-note" style={{ margin: '10px 0 16px', fontSize: 11 }}>
+        Every programme, book, site or app used this school year. Florida asks for the titles of
+        the materials — this page is that list.
+      </p>
+
+      {year.curriculums.length === 0 ? (
+        <p className="empty-state">Nothing listed yet.</p>
+      ) : (
+        <table className="table" style={{ width: '100%' }}>
+          <thead>
+            <tr>
+              <th style={{ width: '32%' }}>Title</th>
+              <th style={{ width: '20%' }}>Publisher</th>
+              <th style={{ width: '18%' }}>Subject</th>
+              <th>How it was used</th>
+              <th className="no-print" style={{ width: 40 }} />
+            </tr>
+          </thead>
+          <tbody>
+            {year.curriculums.map((row) => (
+              <tr key={row.id}>
+                <td>
+                  <input
+                    className="cell-input"
+                    value={row.title}
+                    placeholder="Time4Learning"
+                    aria-label="Curriculum title"
+                    onChange={(e) => set(row.id, { title: e.target.value })}
+                  />
+                </td>
+                <td>
+                  <input
+                    className="cell-input"
+                    value={row.publisher}
+                    placeholder="Publisher"
+                    aria-label="Publisher"
+                    onChange={(e) => set(row.id, { publisher: e.target.value })}
+                  />
+                </td>
+                <td>
+                  <input
+                    className="cell-input"
+                    value={row.subject}
+                    placeholder="Language Arts"
+                    aria-label="Subject"
+                    onChange={(e) => set(row.id, { subject: e.target.value })}
+                  />
+                </td>
+                <td>
+                  <input
+                    className="cell-input"
+                    value={row.usage}
+                    placeholder="Daily lessons and quizzes"
+                    aria-label="How it was used"
+                    onChange={(e) => set(row.id, { usage: e.target.value })}
+                  />
+                </td>
+                <td className="no-print">
+                  <RemoveButton
+                    onClick={() => remove(row.id)}
+                    label={`Remove ${row.title || 'this curriculum'}`}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <button type="button" className="btn no-print" style={{ marginTop: 14 }} onClick={add}>
+        + Add curriculum
+      </button>
+    </section>
+  )
+}
+
+/**
+ * The child's own work, at the back of the portfolio where the packet keeps it.
+ *
+ * The picker takes as many files as the parent selects — a whole folder of
+ * scans in one go — and each one becomes its own sample, titled from the file
+ * name so nothing arrives nameless. Files are uploaded one by one on purpose:
+ * one that fails is reported by name and the rest still land.
+ */
+function SamplesPage({
+  year,
+  add,
+  set,
+  remove,
+  busy,
+}: {
+  year: MonthlyYear
+  add: (files: File[]) => void
+  set: (id: string, patch: Partial<MonthlySample>) => void
+  remove: (id: string) => void
+  busy: boolean
+}) {
+  const [over, setOver] = useState(false)
+
+  const take = (list: FileList | null) => {
+    const files = Array.from(list ?? [])
+    if (files.length) add(files)
+  }
+
+  return (
+    <section className="sheet doc-sheet">
+      <div className="kicker">Samples of Work</div>
+      <h2 className="sheet-title" style={{ fontSize: 34, margin: '6px 0 0' }}>
+        Work samples
+      </h2>
+      <p className="sheet-note" style={{ margin: '10px 0 16px', fontSize: 11 }}>
+        Photographs of pages, worksheets, drawings, scanned PDFs. Choose as many files as you
+        like — each one is filed on its own and you can name it afterwards.
+      </p>
+
+      <label
+        className="drop-zone no-print"
+        data-over={over || undefined}
+        onDragOver={(e) => {
+          e.preventDefault()
+          setOver(true)
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          e.preventDefault()
+          setOver(false)
+          take(e.dataTransfer.files)
+        }}
+      >
+        <span style={{ fontSize: 13 }}>
+          {busy ? 'Uploading…' : 'Choose files or drop them here — you can pick several at once'}
+        </span>
+        <input
+          type="file"
+          multiple
+          accept="image/*,application/pdf"
+          aria-label="Work sample files"
+          disabled={busy}
+          onChange={(e) => {
+            take(e.target.files)
+            // Cleared so choosing the same file twice still fires a change.
+            e.target.value = ''
+          }}
+        />
+      </label>
+
+      {year.samples.length === 0 ? (
+        <p className="empty-state" style={{ marginTop: 16 }}>
+          Nothing uploaded yet.
+        </p>
+      ) : (
+        <div className="sample-grid">
+          {year.samples.map((sample) => (
+            <figure key={sample.id} className="sample-card">
+              <FilePlate
+                url={sample.url}
+                mime={sample.mime}
+                title={sample.title || sample.file_name}
+                height="150px"
+                placeholder="the child’s work"
+              />
+              <input
+                className="cell-input"
+                value={sample.title}
+                placeholder="What this is"
+                aria-label={`Title for ${sample.file_name}`}
+                onChange={(e) => set(sample.id, { title: e.target.value })}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  className="cell-input"
+                  value={sample.subject}
+                  placeholder="Subject"
+                  aria-label={`Subject for ${sample.file_name}`}
+                  onChange={(e) => set(sample.id, { subject: e.target.value })}
+                />
+                <input
+                  className="cell-input"
+                  type="date"
+                  value={sample.sample_date}
+                  aria-label={`Date for ${sample.file_name}`}
+                  onChange={(e) => set(sample.id, { sample_date: e.target.value })}
+                />
+              </div>
+              <figcaption
+                className="sample-meta"
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {sample.file_name}
+                </span>
+                <span className="no-print" style={{ display: 'flex', alignItems: 'center' }}>
+                  <ViewButton
+                    url={sample.url}
+                    mime={sample.mime}
+                    title={sample.title || sample.file_name}
+                  />
+                  <RemoveButton
+                    onClick={() => remove(sample.id)}
+                    label={`Remove ${sample.title || sample.file_name}`}
+                  />
+                </span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
+
     </section>
   )
 }
