@@ -2,52 +2,45 @@ import { useMemo, useRef, useState } from 'react'
 import { Field, RemoveButton } from '@/components/ui'
 import type { Repo } from '@/data/repo'
 import { useAction } from '@/data/store'
-import { SUBJECT_TAG_LABEL, fmtDate, subjectLabel, sumHours, today } from '@/lib/format'
-import type { Portfolio, SubjectTag } from '@/lib/types'
+import { areaLabel, fmtDate, shortGoal, sumHours, today } from '@/lib/format'
+import {
+  OUTCOME_LEVELS,
+  OUTCOME_LEVEL_LABEL,
+  type OutcomeLevel,
+  type Portfolio,
+} from '@/lib/types'
 
-type Kind = 'lesson' | 'book' | 'sample'
+type Kind = 'session' | 'book' | 'sample'
 
 const KINDS: { key: Kind; label: string }[] = [
-  { key: 'lesson', label: 'Lesson or activity' },
+  { key: 'session', label: 'Session or activity' },
   { key: 'book', label: 'Book finished' },
   { key: 'sample', label: 'Work sample' },
 ]
 
-const COPY: Record<Kind, { title: string; placeholder: string; destination: string }> = {
-  lesson: {
-    title: 'What was covered',
-    placeholder: 'Measured the kitchen in shoe-lengths',
-    destination: 'Files into: Log of educational activities',
-  },
-  book: {
-    title: 'Book title',
-    placeholder: 'Owl Moon',
-    destination: 'Files into: Reading list',
-  },
-  sample: {
-    title: 'What the work is',
-    placeholder: 'Handwriting page — capital letters',
-    destination: 'Files into: Samples of work',
-  },
+const DESTINATION: Record<Kind, string> = {
+  session: 'Files into: Sessions',
+  book: 'Files into: Reading list',
+  sample: 'Files into: Work samples',
+}
+
+const TITLE_LABEL: Record<Kind, string> = {
+  session: 'What was covered',
+  book: 'Book title',
+  sample: 'What the work is',
 }
 
 interface Draft {
   date: string
   title: string
-  notes: string
+  area_id: string
+  goal_id: string | null
+  method: string
+  outcome: string
+  outcome_level: OutcomeLevel | null
   hours: string
-  subject: SubjectTag
   author: string
 }
-
-const blank = (): Draft => ({
-  date: today(),
-  title: '',
-  notes: '',
-  hours: '',
-  subject: 'ela',
-  author: '',
-})
 
 interface FeedEntry {
   id: string
@@ -59,30 +52,52 @@ interface FeedEntry {
 }
 
 export function QuickLog({ portfolio }: { portfolio: Portfolio }) {
-  const [kind, setKind] = useState<Kind>('lesson')
+  const { student, areas, goals, entries, books, workSamples } = portfolio
+
+  const blank = (): Draft => ({
+    date: today(),
+    title: '',
+    area_id: areas[0]?.id ?? '',
+    goal_id: null,
+    method: '',
+    outcome: '',
+    outcome_level: null,
+    hours: '',
+    author: '',
+  })
+
+  const [kind, setKind] = useState<Kind>('session')
   const [form, setForm] = useState<Draft>(blank)
   const [file, setFile] = useState<File | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
-  const save = useAction<{ kind: Kind; form: Draft; file: File | null }>(
-    (repo, a) => fileEntry(repo, a.kind, a.form, a.file),
+  const save = useAction<{ kind: Kind; form: Draft; file: File | null }>((repo, a) =>
+    fileEntry(repo, a.kind, a.form, a.file),
   )
-  const removeActivity = useAction<string>((repo, id) => repo.deleteActivity(id))
-  const removeBook = useAction<string>((repo, id) => repo.deleteBook(id))
-  const removeSample = useAction<string>((repo, id) => repo.deleteWorkSample(id))
-
-  const { subjects, activities, books, workSamples } = portfolio
+  const removeEntry = useAction<string>((repo, id) => repo.remove('entries', id))
+  const removeBook = useAction<string>((repo, id) => repo.remove('books', id))
+  const removeSample = useAction<string>((repo, id) => repo.remove('workSamples', id))
 
   const feed = useMemo<FeedEntry[]>(() => {
     const rows: FeedEntry[] = [
-      ...activities.map((a) => ({
-        id: a.id,
-        kindLabel: subjectLabel(a.subject_key, subjects),
-        date: a.date,
-        title: a.title,
-        meta: a.notes + (a.hours ? `  ·  ${a.hours} h` : ''),
-        remove: () => removeActivity.mutate(a.id),
-      })),
+      ...entries.map((e) => {
+        const goal = goals.find((g) => g.id === e.goal_id)
+        return {
+          id: e.id,
+          kindLabel: areaLabel(e.area_id, areas),
+          date: e.date,
+          title: e.title,
+          meta: [
+            goal ? `Goal: ${shortGoal(goal.text, 60)}` : null,
+            e.outcome || null,
+            e.outcome_level ? OUTCOME_LEVEL_LABEL[e.outcome_level] : null,
+            student.show_hours && e.hours ? `${e.hours} h` : null,
+          ]
+            .filter(Boolean)
+            .join('  ·  '),
+          remove: () => removeEntry.mutate(e.id),
+        }
+      }),
       ...books.map((b) => ({
         id: b.id,
         kindLabel: 'Reading',
@@ -97,25 +112,29 @@ export function QuickLog({ portfolio }: { portfolio: Portfolio }) {
         date: w.date,
         title: w.title,
         meta:
-          SUBJECT_TAG_LABEL[w.subject] + (w.url ? '  ·  photo attached' : '  ·  no photo yet'),
+          areaLabel(w.area_id, areas) + (w.url ? '  ·  photo attached' : '  ·  no photo yet'),
         remove: () => removeSample.mutate(w.id),
       })),
     ]
     return rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
-  }, [activities, books, workSamples, subjects, removeActivity, removeBook, removeSample])
+  }, [entries, books, workSamples, areas, goals, student.show_hours, removeEntry, removeBook, removeSample])
 
-  const totalHours = sumHours(activities)
-  const copy = COPY[kind]
+  const goalsFor = (areaId: string) => goals.filter((g) => g.area_id === areaId)
+  const totalHours = sumHours(entries)
 
   function submit() {
     if (!form.title.trim()) return
-    // Clear only on success — a failed save must not swallow what was typed.
     save.mutate(
       { kind, form, file },
       {
         onSuccess: () => {
-          // Date and subject are sticky: a day's entries share both.
-          setForm({ ...blank(), date: form.date, subject: form.subject })
+          // Date, area and goal are sticky: a day's entries share them.
+          setForm({
+            ...blank(),
+            date: form.date,
+            area_id: form.area_id,
+            goal_id: form.goal_id,
+          })
           setFile(null)
           if (fileInput.current) fileInput.current.value = ''
         },
@@ -130,7 +149,7 @@ export function QuickLog({ portfolio }: { portfolio: Portfolio }) {
         One running log
       </h1>
       <p className="panel-hint" style={{ maxWidth: '62ch' }}>
-        Write down whatever happened today — a lesson, a book finished, a photo of the work. Each
+        Write down whatever happened today — a session, a book finished, a photo of the work. Each
         entry files itself into the right portfolio section, so nothing has to be organized twice.
       </p>
 
@@ -150,31 +169,35 @@ export function QuickLog({ portfolio }: { portfolio: Portfolio }) {
         </div>
 
         <div className="quick-fields">
-          <Field label="Date">
-            {(id) => (
-              <input
-                id={id}
-                className="input"
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
-            )}
-          </Field>
+          {student.show_dates && (
+            <Field label="Date">
+              {(id) => (
+                <input
+                  id={id}
+                  className="input"
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              )}
+            </Field>
+          )}
 
-          <Field label={copy.title}>
+          <Field label={TITLE_LABEL[kind]}>
             {(id) => (
               <input
                 id={id}
                 className="input"
-                placeholder={copy.placeholder}
+                placeholder={
+                  kind === 'book' ? 'Owl Moon' : 'Short vowel word families'
+                }
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
               />
             )}
           </Field>
 
-          <Field label={kind === 'book' ? 'Author' : 'Subject'}>
+          <Field label={kind === 'book' ? 'Author' : 'Area'}>
             {(id) =>
               kind === 'book' ? (
                 <input
@@ -188,12 +211,14 @@ export function QuickLog({ portfolio }: { portfolio: Portfolio }) {
                 <select
                   id={id}
                   className="input"
-                  value={form.subject}
-                  onChange={(e) => setForm({ ...form, subject: e.target.value as SubjectTag })}
+                  value={form.area_id}
+                  onChange={(e) =>
+                    setForm({ ...form, area_id: e.target.value, goal_id: null })
+                  }
                 >
-                  {subjects.map((s) => (
-                    <option key={s.key} value={s.key}>
-                      {s.label}
+                  {areas.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.label}
                     </option>
                   ))}
                 </select>
@@ -201,30 +226,101 @@ export function QuickLog({ portfolio }: { portfolio: Portfolio }) {
             }
           </Field>
 
-          <Field label="Notes" span>
-            {(id) => (
-              <textarea
-                id={id}
-                className="input"
-                style={{ minHeight: 60 }}
-                placeholder="A sentence is plenty — it becomes the portfolio description."
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              />
-            )}
-          </Field>
+          {kind !== 'book' && (
+            <Field label="Goal worked on" span>
+              {(id) => (
+                <select
+                  id={id}
+                  className="input"
+                  value={form.goal_id ?? ''}
+                  onChange={(e) => setForm({ ...form, goal_id: e.target.value || null })}
+                >
+                  <option value="">No specific goal</option>
+                  {goalsFor(form.area_id).map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {shortGoal(g.text, 60)}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+          )}
 
-          {kind === 'lesson' && (
-            <Field label="Hours">
+          {kind === 'session' && (
+            <>
+              <Field label="Method used" span>
+                {(id) => (
+                  <textarea
+                    id={id}
+                    className="input"
+                    style={{ minHeight: 56 }}
+                    placeholder="How you taught it — materials, steps, supports."
+                    value={form.method}
+                    onChange={(e) => setForm({ ...form, method: e.target.value })}
+                  />
+                )}
+              </Field>
+              <Field label="Outcome — how the child responded" span>
+                {(id) => (
+                  <textarea
+                    id={id}
+                    className="input"
+                    style={{ minHeight: 56 }}
+                    placeholder="A sentence is plenty — it becomes the portfolio description."
+                    value={form.outcome}
+                    onChange={(e) => setForm({ ...form, outcome: e.target.value })}
+                  />
+                )}
+              </Field>
+              <Field label="Level of support">
+                {(id) => (
+                  <select
+                    id={id}
+                    className="input"
+                    value={form.outcome_level ?? ''}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        outcome_level: (e.target.value || null) as OutcomeLevel | null,
+                      })
+                    }
+                  >
+                    <option value="">Not recorded</option>
+                    {OUTCOME_LEVELS.map((l) => (
+                      <option key={l} value={l}>
+                        {OUTCOME_LEVEL_LABEL[l]}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </Field>
+              {student.show_hours && (
+                <Field label="Hours">
+                  {(id) => (
+                    <input
+                      id={id}
+                      className="input"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={form.hours}
+                      onChange={(e) => setForm({ ...form, hours: e.target.value })}
+                    />
+                  )}
+                </Field>
+              )}
+            </>
+          )}
+
+          {kind === 'book' && (
+            <Field label="How it was read" span>
               {(id) => (
                 <input
                   id={id}
                   className="input"
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  value={form.hours}
-                  onChange={(e) => setForm({ ...form, hours: e.target.value })}
+                  placeholder="Read aloud together / read independently"
+                  value={form.method}
+                  onChange={(e) => setForm({ ...form, method: e.target.value })}
                 />
               )}
             </Field>
@@ -255,7 +351,7 @@ export function QuickLog({ portfolio }: { portfolio: Portfolio }) {
           >
             {save.isPending ? 'Saving…' : 'Save to portfolio'}
           </button>
-          <span style={{ fontSize: 12, opacity: 0.6 }}>{copy.destination}</span>
+          <span style={{ fontSize: 12, opacity: 0.6 }}>{DESTINATION[kind]}</span>
         </div>
       </div>
 
@@ -269,7 +365,8 @@ export function QuickLog({ portfolio }: { portfolio: Portfolio }) {
       >
         <h2 style={{ fontSize: 20, fontWeight: 400, margin: 0 }}>This year so far</h2>
         <span style={{ fontSize: 12, opacity: 0.6 }}>
-          {feed.length} entries · {books.length} books · {totalHours} hours
+          {feed.length} entries · {books.length} books
+          {student.show_hours ? ` · ${totalHours} hours` : ''}
         </span>
       </div>
       <hr className="hr" style={{ margin: '0 0 6px' }} />
@@ -280,9 +377,11 @@ export function QuickLog({ portfolio }: { portfolio: Portfolio }) {
         ) : (
           feed.map((e) => (
             <div key={e.id} className="feed-row">
-              <div className="num" style={{ fontSize: 12, opacity: 0.6, paddingTop: 3 }}>
-                {fmtDate(e.date)}
-              </div>
+              {student.show_dates && (
+                <div className="num" style={{ fontSize: 12, opacity: 0.6, paddingTop: 3 }}>
+                  {fmtDate(e.date)}
+                </div>
+              )}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   <span className="tag tag-accent">{e.kindLabel}</span>
@@ -304,24 +403,35 @@ export function QuickLog({ portfolio }: { portfolio: Portfolio }) {
 /** Both flows write the same tables — this is the only place they diverge. */
 function fileEntry(repo: Repo, kind: Kind, form: Draft, file: File | null): Promise<void> {
   if (kind === 'book') {
-    return repo.addBook({
+    return repo.add('books', {
       title: form.title,
       author: form.author,
       finished_on: form.date,
-      how_read: form.notes || 'Read aloud together',
+      how_read: form.method || 'Read aloud together',
     })
   }
   if (kind === 'sample') {
-    return repo.addWorkSample(
-      { title: form.title, subject: form.subject, date: form.date },
+    return repo.add(
+      'workSamples',
+      {
+        title: form.title,
+        area_id: form.area_id || null,
+        goal_id: form.goal_id,
+        date: form.date,
+        storage_path: null,
+        mime: null,
+      },
       file,
     )
   }
-  return repo.addActivity({
-    subject_key: form.subject,
-    date: form.date,
+  return repo.add('entries', {
+    area_id: form.area_id,
+    goal_id: form.goal_id,
     title: form.title,
-    notes: form.notes,
+    method: form.method,
+    outcome: form.outcome,
+    outcome_level: form.outcome_level,
+    date: form.date,
     hours: form.hours,
   })
 }

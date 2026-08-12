@@ -5,7 +5,7 @@ test.describe('Uploads', () => {
     await openSection(app, 'Work samples')
 
     await app.getByLabel('What the work is').fill('Watercolour of the garden')
-    await app.getByLabel('Subject').selectOption('ela')
+    await app.getByLabel('Area', { exact: true }).selectOption({ label: 'Reading' })
     await app.getByLabel('Date').fill('2026-04-02')
     await app.getByLabel('Photo or scan').setInputFiles({
       name: 'garden.png',
@@ -16,7 +16,7 @@ test.describe('Uploads', () => {
 
     const figure = app.locator('figure', { hasText: 'Watercolour of the garden' })
     await expect(figure).toBeVisible()
-    await expect(sectionCount(app, 'Work samples')).toHaveText('5')
+    await expect(sectionCount(app, 'Work samples')).toHaveText('4')
 
     // The image was downscaled to a JPEG data URL and matted in a .plate.
     const plate = figure.locator('.plate')
@@ -24,7 +24,7 @@ test.describe('Uploads', () => {
 
     await figure.getByRole('button', { name: 'Remove' }).click()
     await expect(figure).toHaveCount(0)
-    await expect(sectionCount(app, 'Work samples')).toHaveText('4')
+    await expect(sectionCount(app, 'Work samples')).toHaveText('3')
   })
 
   test('a sample with no photo keeps the hatched placeholder', async ({ app }) => {
@@ -113,7 +113,7 @@ test.describe('Uploads', () => {
     await app.getByRole('button', { name: 'Add sample' }).click()
 
     await expect(app.getByRole('status')).toContainText('over the 15 MB limit')
-    await expect(sectionCount(app, 'Work samples')).toHaveText('4')
+    await expect(sectionCount(app, 'Work samples')).toHaveText('3')
   })
 
   test('a document with only a file takes the file name as its title', async ({ app }) => {

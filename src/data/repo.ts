@@ -1,55 +1,114 @@
+import { SUPPORT_DOCS_BUCKET, WORK_SAMPLES_BUCKET } from '@/lib/supabase'
 import type {
-  Activity,
+  Area,
+  Attachment,
   Book,
   Curriculum,
+  Entry,
+  Evaluation,
+  Goal,
   Portfolio,
   Student,
-  SubjectTag,
-  SupportKind,
+  SupportDocument,
+  WorkSample,
 } from '@/lib/types'
 
-export type NewActivity = Omit<Activity, 'id'>
-export type NewCurriculum = Omit<Curriculum, 'id' | 'sort'>
-export type NewBook = Omit<Book, 'id'>
-export interface NewWorkSample {
-  title: string
-  subject: SubjectTag
-  date: string
+/**
+ * Every list in the portfolio behaves the same way — add a row, edit it in
+ * place, drag it into order, delete it, and hang a file on it. Rather than
+ * nine near-identical method sets, the repository takes the collection as an
+ * argument and both backends drive off one table map.
+ */
+export interface Rows {
+  areas: Area
+  goals: Goal
+  entries: Entry
+  curriculums: Curriculum
+  books: Book
+  workSamples: WorkSample
+  supportDocuments: SupportDocument
+  evaluations: Evaluation
+  attachments: Attachment
 }
-export interface NewSupportDocument {
-  title: string
-  kind: SupportKind
-  document_date: string
-  note: string
+
+export type CollectionKey = keyof Rows
+
+/**
+ * Columns the store fills in from the uploaded file, so a caller passing a
+ * File never has to describe it.
+ */
+type UploadField = 'storage_path' | 'mime' | 'file_name' | 'size_bytes'
+
+/** What the caller supplies on insert: the row minus what the store assigns. */
+export type NewRow<K extends CollectionKey> = Omit<
+  Rows[K],
+  'id' | 'sort' | 'url' | UploadField
+> &
+  Partial<Pick<Rows[K], Extract<UploadField | 'sort', keyof Rows[K]>>>
+
+export type RowPatch<K extends CollectionKey> = Partial<Omit<Rows[K], 'id' | 'url'>>
+
+/** Postgres table behind each collection. */
+export const TABLE: Record<CollectionKey, string> = {
+  areas: 'areas',
+  goals: 'goals',
+  entries: 'entries',
+  curriculums: 'curriculums',
+  books: 'books',
+  workSamples: 'work_samples',
+  supportDocuments: 'support_documents',
+  evaluations: 'evaluations',
+  attachments: 'attachments',
 }
 
 /**
- * Everything the UI needs from storage. Two implementations back it: Supabase
- * (auth + Postgres + private buckets) and a browser-local one used when no
- * Supabase project is configured, so the app runs and demos without a backend.
+ * Which bucket a collection's uploads land in. Work samples are the child's
+ * own work; everything else may carry an IEP or a clinical report, so it goes
+ * to the stricter bucket.
  */
+export const BUCKET: Partial<Record<CollectionKey, string>> = {
+  workSamples: WORK_SAMPLES_BUCKET,
+  supportDocuments: SUPPORT_DOCS_BUCKET,
+  evaluations: SUPPORT_DOCS_BUCKET,
+  attachments: SUPPORT_DOCS_BUCKET,
+}
+
+/** Collections whose rows the user can drag into a different order. */
+export const REORDERABLE: CollectionKey[] = [
+  'areas',
+  'goals',
+  'entries',
+  'curriculums',
+  'books',
+  'workSamples',
+  'evaluations',
+]
+
 export interface Repo {
   readonly mode: 'supabase' | 'demo'
 
   getPortfolio(): Promise<Portfolio>
   updateStudent(patch: Partial<Omit<Student, 'id'>>): Promise<void>
 
-  addActivity(input: NewActivity): Promise<void>
-  deleteActivity(id: string): Promise<void>
+  add<K extends CollectionKey>(
+    collection: K,
+    input: NewRow<K>,
+    file?: File | null,
+  ): Promise<void>
 
-  addCurriculum(input: NewCurriculum): Promise<void>
-  deleteCurriculum(id: string): Promise<void>
+  update<K extends CollectionKey>(
+    collection: K,
+    id: string,
+    patch: RowPatch<K>,
+    file?: File | null,
+  ): Promise<void>
 
-  addBook(input: NewBook): Promise<void>
-  deleteBook(id: string): Promise<void>
+  remove<K extends CollectionKey>(collection: K, id: string): Promise<void>
 
-  addWorkSample(input: NewWorkSample, file: File | null): Promise<void>
-  deleteWorkSample(id: string): Promise<void>
+  /** Persists the given order; ids are listed front to back. */
+  reorder<K extends CollectionKey>(collection: K, orderedIds: string[]): Promise<void>
 
-  addSupportDocument(input: NewSupportDocument, file: File | null): Promise<void>
-  deleteSupportDocument(id: string): Promise<void>
-
-  /** Wipes the year and reinstates the sample data from the design. */
+  /** Wipes the year and reinstates the sample data. */
   resetToSample(): Promise<void>
 }
 

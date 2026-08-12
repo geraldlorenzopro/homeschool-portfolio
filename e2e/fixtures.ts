@@ -15,7 +15,6 @@ export const test = base.extend<{ app: Page }>({
         window.sessionStorage.setItem('e2e-seeded', '1')
       }
     })
-    // Uploaded files ask for confirmation before they are deleted.
     page.on('dialog', (dialog) => dialog.accept())
     await page.goto('/')
     await expect(page.getByRole('heading', { name: 'Student information' })).toBeVisible()
@@ -33,22 +32,32 @@ export const PNG_1PX = Buffer.from(
 
 /** A minimal but structurally valid PDF. The app stores it without parsing. */
 export const PDF_MIN = Buffer.from(
-  `%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n`,
+  `%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n`,
   'utf8',
 )
 
-/** The sidebar row for a section (its accessible name includes the count). */
 export function sectionLink(page: Page, label: string) {
   return page.locator('.section-link', { hasText: label })
 }
 
-/** Open one of the seven sections in the flow-A sidebar. */
 export async function openSection(page: Page, label: string) {
   await sectionLink(page, label).click()
   await expect(page.locator('.panel-title')).toBeVisible()
 }
 
-/** The count badge the sidebar shows next to a section. */
 export function sectionCount(page: Page, label: string) {
   return sectionLink(page, label).locator('.section-count')
+}
+
+/** The table row (or figure) containing the given text. */
+export function row(page: Page, text: string) {
+  return page.locator('tbody tr', { hasText: text })
+}
+
+/**
+ * The row currently in edit mode. Once a row opens for editing its text moves
+ * into input values, where `hasText` cannot see it — so anchor on the state.
+ */
+export function editingRow(page: Page) {
+  return page.locator('tr[data-editing="true"]')
 }

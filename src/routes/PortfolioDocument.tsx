@@ -1,49 +1,38 @@
 import { useState } from 'react'
 import { DocPage, type PaperSize } from '@/components/DocPage'
 import { Plate } from '@/components/ui'
-import { SUBJECT_TAG_LABEL, byDateAsc, fmtDate, sumHours } from '@/lib/format'
+import { areaLabel, fmtDate, sumHours } from '@/lib/format'
 import { isImage, isPdf } from '@/lib/image'
-import type { Activity, Portfolio } from '@/lib/types'
+import {
+  GOAL_STATUS_LABEL,
+  OUTCOME_LEVEL_LABEL,
+  type Entry,
+  type Portfolio,
+} from '@/lib/types'
 
 export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
   const [paper, setPaper] = useState<PaperSize>('letter')
-  const [showHours, setShowHours] = useState(true)
-  const [groupBySubject, setGroupBySubject] = useState(true)
 
-  const { student, subjects, activities, curriculums, books, workSamples, supportDocuments } =
-    portfolio
+  const {
+    student,
+    areas,
+    goals,
+    entries,
+    curriculums,
+    books,
+    workSamples,
+    supportDocuments,
+    evaluations,
+  } = portfolio
 
-  const totalHours = sumHours(activities)
-  const subjectNames = subjects.map((s) => s.label)
+  const showDates = student.show_dates
+  const showHours = student.show_hours
+  const totalHours = sumHours(entries)
 
-  const groups = groupBySubject
-    ? subjects
-        .map((s) => {
-          const rows = activities.filter((a) => a.subject_key === s.key).sort(byDateAsc)
-          return {
-            label: s.label,
-            rows,
-            summary:
-              `${rows.length} entries` +
-              (showHours ? `  ·  ${sumHours(rows)} recorded hours` : ''),
-          }
-        })
-        .filter((g) => g.rows.length > 0)
-    : [
-        {
-          label: 'Chronological log',
-          rows: [...activities].sort(byDateAsc),
-          summary:
-            `${activities.length} entries` +
-            (showHours ? `  ·  ${totalHours} recorded hours` : ''),
-        },
-      ].filter((g) => g.rows.length > 0)
-
-  /** In a single chronological list each row still names its subject. */
-  const rowTitle = (a: Activity) =>
-    groupBySubject
-      ? a.title
-      : `${subjects.find((s) => s.key === a.subject_key)?.label ?? ''} — ${a.title}`
+  /** Areas that actually have something to show, in the user's own order. */
+  const usedAreas = areas.filter(
+    (a) => goals.some((g) => g.area_id === a.id) || entries.some((e) => e.area_id === a.id),
+  )
 
   const facts: [string, string][] = [
     ['Student', student.name],
@@ -53,14 +42,14 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
     ['Parent / instructor', student.parent_name],
     ['County of registration', student.county],
     ['Evaluator', student.evaluator],
-    [
-      'Recorded instructional hours',
-      `${totalHours} hours logged across ${subjectNames.join(' and ')}`,
-    ],
+    ['Areas of instruction', usedAreas.map((a) => a.label).join(', ')],
+    ['Goals recorded', `${goals.length} across ${usedAreas.length} areas`],
+    ...(showHours
+      ? ([['Recorded instructional hours', `${totalHours} hours`]] as [string, string][])
+      : []),
   ]
 
-  const sortedBooks = [...books].sort(byDateAsc)
-  const sortedSamples = [...workSamples].sort(byDateAsc)
+  const entryDate = (e: Entry) => (showDates ? fmtDate(e.date) : '')
 
   return (
     <div>
@@ -71,34 +60,19 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
         </span>
 
         <div className="doc-toolbar-options">
-          <label className="radio">
-            <select
-              className="input"
-              style={{ minHeight: 30, fontSize: 12 }}
-              value={paper}
-              onChange={(e) => setPaper(e.target.value as PaperSize)}
-              aria-label="Paper size"
-            >
-              <option value="letter">Letter</option>
-              <option value="a4">A4</option>
-            </select>
-          </label>
-          <label style={{ display: 'inline-flex', gap: 6, alignItems: 'center', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={showHours}
-              onChange={(e) => setShowHours(e.target.checked)}
-            />
-            Show hours
-          </label>
-          <label style={{ display: 'inline-flex', gap: 6, alignItems: 'center', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={groupBySubject}
-              onChange={(e) => setGroupBySubject(e.target.checked)}
-            />
-            Group by subject
-          </label>
+          <select
+            className="input"
+            style={{ minHeight: 30, fontSize: 12 }}
+            value={paper}
+            onChange={(e) => setPaper(e.target.value as PaperSize)}
+            aria-label="Paper size"
+          >
+            <option value="letter">Letter</option>
+            <option value="a4">A4</option>
+          </select>
+          <span style={{ fontSize: 12, opacity: 0.6 }}>
+            Dates, hours and the activity log are switched in Student information.
+          </span>
           <button type="button" className="btn btn-primary" onClick={() => window.print()}>
             Save as PDF
           </button>
@@ -115,9 +89,7 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
         }
         footer={
           <>
-            <span>
-              Home education portfolio · retained two years per s. 1002.41(1)(b), F.S.
-            </span>
+            <span>Home education portfolio · retained two years per s. 1002.41(1)(b), F.S.</span>
             <span>{student.parent_name}</span>
           </>
         }
@@ -182,36 +154,324 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
             </tbody>
           </table>
 
+          {/* ── child profile (opt-in) ────────────────────────────────── */}
+          {student.include_profile && (
+            <>
+              <h2 style={{ margin: '26pt 0 6pt' }}>Child profile</h2>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5pt' }}>
+                <tbody>
+                  {(
+                    [
+                      [
+                        'Diagnosis',
+                        student.no_formal_diagnosis
+                          ? 'No formal diagnosis on record'
+                          : [
+                              student.diagnosis,
+                              student.diagnosis_date && fmtDate(student.diagnosis_date),
+                              student.diagnosed_by,
+                            ]
+                              .filter(Boolean)
+                              .join(' · '),
+                      ],
+                      ['Strengths', student.strengths],
+                      ['Needs', student.needs],
+                      ['How the child learns best', student.learns_best],
+                    ] as [string, string][]
+                  )
+                    .filter(([, v]) => v.trim() !== '')
+                    .map(([k, v]) => (
+                      <tr key={k}>
+                        <td
+                          style={{
+                            width: '34%',
+                            padding: '6pt 8pt 6pt 0',
+                            borderBottom: '1px solid #e5e2e2',
+                            color: '#605d5d',
+                            fontSize: '9.5pt',
+                            letterSpacing: '0.04em',
+                            textTransform: 'uppercase',
+                            verticalAlign: 'top',
+                          }}
+                        >
+                          {k}
+                        </td>
+                        <td
+                          style={{
+                            padding: '6pt 0',
+                            borderBottom: '1px solid #e5e2e2',
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          {v}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
           {/* ── instructor's statement ────────────────────────────────── */}
           {student.statement.trim() && (
             <>
               <h2 style={{ margin: '26pt 0 6pt' }}>Instructor&rsquo;s statement</h2>
               <p
-                style={{
-                  fontSize: '10.5pt',
-                  lineHeight: 1.65,
-                  textAlign: 'justify',
-                  margin: 0,
-                }}
+                style={{ fontSize: '10.5pt', lineHeight: 1.65, textAlign: 'justify', margin: 0 }}
               >
                 {student.statement}
               </p>
             </>
           )}
 
+          {/* ── evaluations ───────────────────────────────────────────── */}
+          {evaluations.length > 0 && (
+            <>
+              <h2 style={{ margin: '26pt 0 6pt' }}>Recent evaluations</h2>
+              {evaluations.map((ev) => (
+                <div key={ev.id} className="keep" style={{ marginBottom: '14pt' }}>
+                  <div className="doc-rule-head">
+                    <h3>{ev.title}</h3>
+                    <span style={{ fontSize: '9pt', color: '#605d5d' }}>
+                      {[ev.kind, fmtDate(ev.evaluation_date), ev.performed_by]
+                        .filter(Boolean)
+                        .join('  ·  ')}
+                    </span>
+                  </div>
+                  {ev.summary && (
+                    <p
+                      style={{
+                        fontSize: '10pt',
+                        lineHeight: 1.6,
+                        color: '#444141',
+                        margin: '8pt 0 0',
+                      }}
+                    >
+                      {ev.summary}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* ── goals and the work against them ───────────────────────── */}
+          {usedAreas.length > 0 && (
+            <>
+              <h2 className="break-page" style={{ margin: '30pt 0 6pt' }}>
+                Goals and instruction by area
+              </h2>
+              <p style={{ fontSize: '9.5pt', color: '#605d5d', margin: '0 0 14pt' }}>
+                For each goal: the method used to work it, and how the student responded.
+              </p>
+
+              {usedAreas.map((area) => {
+                const areaGoals = goals.filter((g) => g.area_id === area.id)
+                const looseEntries = entries.filter(
+                  (e) => e.area_id === area.id && !e.goal_id,
+                )
+                return (
+                  <div key={area.id} style={{ marginBottom: '22pt' }}>
+                    <div className="doc-rule-head">
+                      <h3>{area.label}</h3>
+                      <span className="num" style={{ fontSize: '9pt', color: '#605d5d' }}>
+                        {areaGoals.length} goal{areaGoals.length === 1 ? '' : 's'}
+                      </span>
+                    </div>
+
+                    {areaGoals.map((goal) => {
+                      const sessions = entries.filter((e) => e.goal_id === goal.id)
+                      const evidence = workSamples.filter((w) => w.goal_id === goal.id)
+                      return (
+                        <div key={goal.id} className="keep" style={{ margin: '12pt 0 16pt' }}>
+                          <div style={{ fontSize: '10.5pt', lineHeight: 1.5 }}>{goal.text}</div>
+                          <div
+                            style={{
+                              fontSize: '8.5pt',
+                              color: '#605d5d',
+                              letterSpacing: '0.05em',
+                              textTransform: 'uppercase',
+                              margin: '4pt 0 8pt',
+                            }}
+                          >
+                            {GOAL_STATUS_LABEL[goal.status]} ·{' '}
+                            {goal.source === 'iep' ? 'From the official IEP' : 'Parent-written'}
+                          </div>
+
+                          {sessions.length === 0 ? (
+                            <p style={{ fontSize: '9.5pt', color: '#605d5d', margin: 0 }}>
+                              No sessions recorded against this goal.
+                            </p>
+                          ) : (
+                            <table className="doc-table">
+                              <tbody>
+                                {sessions.map((e) => (
+                                  <tr key={e.id} className="keep">
+                                    {showDates && (
+                                      <td
+                                        className="doc-td num nowrap"
+                                        style={{ width: '68pt', color: '#605d5d' }}
+                                      >
+                                        {entryDate(e)}
+                                      </td>
+                                    )}
+                                    <td className="doc-td" style={{ paddingRight: 0 }}>
+                                      <div>{e.title}</div>
+                                      {e.method && (
+                                        <div style={{ color: '#605d5d', fontSize: '9pt' }}>
+                                          Method: {e.method}
+                                        </div>
+                                      )}
+                                      {e.outcome && (
+                                        <div style={{ color: '#444141', fontSize: '9pt' }}>
+                                          Outcome: {e.outcome}
+                                          {e.outcome_level &&
+                                            ` (${OUTCOME_LEVEL_LABEL[e.outcome_level]})`}
+                                        </div>
+                                      )}
+                                    </td>
+                                    {showHours && (
+                                      <td
+                                        className="doc-td num"
+                                        style={{
+                                          width: '38pt',
+                                          textAlign: 'right',
+                                          color: '#605d5d',
+                                          paddingRight: 0,
+                                        }}
+                                      >
+                                        {e.hours}
+                                      </td>
+                                    )}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+
+                          {evidence.length > 0 && (
+                            <div
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr',
+                                gap: '14pt',
+                                marginTop: '10pt',
+                              }}
+                            >
+                              {evidence.map((w) => (
+                                <figure key={w.id} className="keep" style={{ margin: 0 }}>
+                                  <Plate
+                                    url={w.url}
+                                    height="120pt"
+                                    placeholder="photo or scan of the work"
+                                  />
+                                  <figcaption
+                                    style={{ fontSize: '9pt', color: '#605d5d', marginTop: '4pt' }}
+                                  >
+                                    {w.title}
+                                    {showDates && w.date ? ` · ${fmtDate(w.date)}` : ''}
+                                  </figcaption>
+                                </figure>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+
+                    {looseEntries.length > 0 && (
+                      <div className="keep" style={{ marginTop: '10pt' }}>
+                        <div
+                          style={{
+                            fontSize: '8.5pt',
+                            color: '#605d5d',
+                            letterSpacing: '0.05em',
+                            textTransform: 'uppercase',
+                            marginBottom: '6pt',
+                          }}
+                        >
+                          Other work in this area
+                        </div>
+                        <table className="doc-table">
+                          <tbody>
+                            {looseEntries.map((e) => (
+                              <tr key={e.id} className="keep">
+                                {showDates && (
+                                  <td
+                                    className="doc-td num nowrap"
+                                    style={{ width: '68pt', color: '#605d5d' }}
+                                  >
+                                    {entryDate(e)}
+                                  </td>
+                                )}
+                                <td className="doc-td" style={{ paddingRight: 0 }}>
+                                  <div>{e.title}</div>
+                                  {e.outcome && (
+                                    <div style={{ color: '#605d5d', fontSize: '9pt' }}>
+                                      {e.outcome}
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </>
+          )}
+
+          {/* ── plain chronological log (opt-in) ──────────────────────── */}
+          {student.show_activity_log && entries.length > 0 && (
+            <>
+              <h2 className="break-page" style={{ margin: '30pt 0 6pt' }}>
+                Log of educational activities
+              </h2>
+              <p style={{ fontSize: '9.5pt', color: '#605d5d', margin: '0 0 12pt' }}>
+                Every session recorded this year, in the order it happened.
+              </p>
+              <table className="doc-table">
+                <tbody>
+                  {[...entries]
+                    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+                    .map((e) => (
+                      <tr key={e.id} className="keep">
+                        {showDates && (
+                          <td
+                            className="doc-td num nowrap"
+                            style={{ width: '68pt', color: '#605d5d' }}
+                          >
+                            {entryDate(e)}
+                          </td>
+                        )}
+                        <td className="doc-td" style={{ paddingRight: 0 }}>
+                          <span>{areaLabel(e.area_id, areas)} — {e.title}</span>
+                          {e.outcome && (
+                            <span style={{ color: '#605d5d' }}> — {e.outcome}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
           {/* ── curriculum ────────────────────────────────────────────── */}
           {curriculums.length > 0 && (
             <>
-              <h2 style={{ margin: '26pt 0 6pt' }}>Curriculum used</h2>
-              <p style={{ fontSize: '9.5pt', color: '#605d5d', margin: '0 0 12pt' }}>
-                Programs, textbooks and packaged courses followed during the school year.
-              </p>
+              <h2 className="break-page" style={{ margin: '30pt 0 6pt' }}>
+                Curriculum used
+              </h2>
               <table className="doc-table">
                 <thead>
                   <tr>
                     <th className="doc-th">Curriculum</th>
                     <th className="doc-th">Publisher</th>
-                    <th className="doc-th">Subject</th>
+                    <th className="doc-th">Area</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -224,11 +484,8 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
                       <td className="doc-td" style={{ color: '#444141' }}>
                         {c.publisher}
                       </td>
-                      <td
-                        className="doc-td nowrap"
-                        style={{ color: '#605d5d', paddingRight: 0 }}
-                      >
-                        {SUBJECT_TAG_LABEL[c.subject]}
+                      <td className="doc-td nowrap" style={{ color: '#605d5d', paddingRight: 0 }}>
+                        {c.area_id ? areaLabel(c.area_id, areas) : 'Multiple areas'}
                       </td>
                     </tr>
                   ))}
@@ -237,70 +494,14 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
             </>
           )}
 
-          {/* ── log of educational activities ─────────────────────────── */}
-          {groups.length > 0 && (
-            <>
-              <h2 className="break-page" style={{ margin: '30pt 0 6pt' }}>
-                Log of educational activities
-              </h2>
-              <p style={{ fontSize: '9.5pt', color: '#605d5d', margin: '0 0 14pt' }}>
-                {groupBySubject
-                  ? 'Dated activities, materials and outcomes, grouped by subject.'
-                  : 'Dated activities, materials and outcomes, in the order they happened.'}
-              </p>
-              {groups.map((g) => (
-                <div key={g.label} className="keep" style={{ marginBottom: '20pt' }}>
-                  <div className="doc-rule-head">
-                    <h3>{g.label}</h3>
-                    <span className="num" style={{ fontSize: '9pt', color: '#605d5d' }}>
-                      {g.summary}
-                    </span>
-                  </div>
-                  <table className="doc-table">
-                    <tbody>
-                      {g.rows.map((e) => (
-                        <tr key={e.id} className="keep">
-                          <td
-                            className="doc-td num nowrap"
-                            style={{ width: '78pt', color: '#605d5d' }}
-                          >
-                            {fmtDate(e.date)}
-                          </td>
-                          <td className="doc-td" style={{ paddingRight: 0 }}>
-                            <span>{rowTitle(e)}</span>
-                            {e.notes && <span style={{ color: '#605d5d' }}> — {e.notes}</span>}
-                          </td>
-                          {showHours && (
-                            <td
-                              className="doc-td num"
-                              style={{
-                                width: '42pt',
-                                textAlign: 'right',
-                                color: '#605d5d',
-                                paddingRight: 0,
-                              }}
-                            >
-                              {e.hours}
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </>
-          )}
-
           {/* ── reading list ──────────────────────────────────────────── */}
-          {sortedBooks.length > 0 && (
+          {books.length > 0 && (
             <>
               <h2 className="break-page" style={{ margin: '30pt 0 6pt' }}>
                 Reading list
               </h2>
               <p style={{ fontSize: '9.5pt', color: '#605d5d', margin: '0 0 12pt' }}>
-                {sortedBooks.length} titles read or shared during the {student.school_year} school
-                year.
+                {books.length} titles read or shared during the {student.school_year} school year.
               </p>
               <table className="doc-table">
                 <thead>
@@ -308,13 +509,15 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
                     <th className="doc-th">Title</th>
                     <th className="doc-th">Author</th>
                     <th className="doc-th">How it was read</th>
-                    <th className="doc-th" style={{ textAlign: 'right' }}>
-                      Finished
-                    </th>
+                    {showDates && (
+                      <th className="doc-th" style={{ textAlign: 'right' }}>
+                        Finished
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedBooks.map((k) => (
+                  {books.map((k) => (
                     <tr key={k.id} className="keep">
                       <td className="doc-td" style={{ fontStyle: 'italic' }}>
                         {k.title}
@@ -325,12 +528,14 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
                       <td className="doc-td" style={{ color: '#605d5d' }}>
                         {k.how_read}
                       </td>
-                      <td
-                        className="doc-td num nowrap"
-                        style={{ textAlign: 'right', color: '#605d5d', paddingRight: 0 }}
-                      >
-                        {fmtDate(k.finished_on)}
-                      </td>
+                      {showDates && (
+                        <td
+                          className="doc-td num nowrap"
+                          style={{ textAlign: 'right', color: '#605d5d', paddingRight: 0 }}
+                        >
+                          {fmtDate(k.finished_on)}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -338,33 +543,30 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
             </>
           )}
 
-          {/* ── samples of work ───────────────────────────────────────── */}
-          {sortedSamples.length > 0 && (
+          {/* ── work samples not already shown beside a goal ───────────── */}
+          {workSamples.some((w) => !w.goal_id) && (
             <>
               <h2 className="break-page" style={{ margin: '30pt 0 6pt' }}>
                 Samples of work
               </h2>
-              <p style={{ fontSize: '9.5pt', color: '#605d5d', margin: '0 0 16pt' }}>
-                Selected materials showing the student&rsquo;s progress across the year.
-              </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20pt' }}>
-                {sortedSamples.map((w) => (
-                  <figure key={w.id} className="keep" style={{ margin: 0 }}>
-                    <Plate
-                      url={w.url}
-                      height="150pt"
-                      placeholder="photo or scan of the work"
-                    />
-                    <figcaption
-                      style={{ fontSize: '9.5pt', lineHeight: 1.45, marginTop: '6pt' }}
-                    >
-                      <div>{w.title}</div>
-                      <div style={{ color: '#605d5d' }}>
-                        {SUBJECT_TAG_LABEL[w.subject]} · {fmtDate(w.date)}
-                      </div>
-                    </figcaption>
-                  </figure>
-                ))}
+                {workSamples
+                  .filter((w) => !w.goal_id)
+                  .map((w) => (
+                    <figure key={w.id} className="keep" style={{ margin: 0 }}>
+                      <Plate url={w.url} height="150pt" placeholder="photo or scan of the work" />
+                      <figcaption
+                        style={{ fontSize: '9.5pt', lineHeight: 1.45, marginTop: '6pt' }}
+                      >
+                        <div>{w.title}</div>
+                        <div style={{ color: '#605d5d' }}>
+                          {[areaLabel(w.area_id, areas), showDates ? fmtDate(w.date) : null]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </div>
+                      </figcaption>
+                    </figure>
+                  ))}
               </div>
             </>
           )}
@@ -435,20 +637,12 @@ export function PortfolioDocument({ portfolio }: { portfolio: Portfolio }) {
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 150pt', gap: '30pt' }}>
               <div
-                style={{
-                  borderBottom: '1px solid #201f1d',
-                  paddingBottom: '3pt',
-                  fontSize: '10pt',
-                }}
+                style={{ borderBottom: '1px solid #201f1d', paddingBottom: '3pt', fontSize: '10pt' }}
               >
                 {student.evaluator}
               </div>
               <div
-                style={{
-                  borderBottom: '1px solid #201f1d',
-                  paddingBottom: '3pt',
-                  fontSize: '10pt',
-                }}
+                style={{ borderBottom: '1px solid #201f1d', paddingBottom: '3pt', fontSize: '10pt' }}
               >
                 {fmtDate(student.evaluation_date)}
               </div>

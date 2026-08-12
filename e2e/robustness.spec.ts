@@ -26,7 +26,7 @@ test.describe('Routing, responsiveness and resilience', () => {
     const picker = app.getByLabel('Section')
     await expect(picker).toBeVisible()
 
-    await picker.selectOption({ label: 'Work samples (4)' })
+    await picker.selectOption({ label: 'Work samples (3)' })
     await expect(app.locator('.panel-title')).toHaveText('Work samples')
   })
 
@@ -35,13 +35,13 @@ test.describe('Routing, responsiveness and resilience', () => {
     const meter = app.getByRole('progressbar')
     await expect(meter).toHaveAttribute('aria-valuenow', '100')
 
-    // Empty the reading list: 6 of 7 sections remain filled.
+    // Empty the reading list: 9 of 10 sections remain filled.
     await app.locator('.section-link', { hasText: 'Reading list' }).click()
     const removals = app.getByRole('button', { name: 'Remove' })
     for (let left = await removals.count(); left > 0; left--) {
       await removals.first().click()
     }
-    await expect(meter).toHaveAttribute('aria-valuenow', '86')
+    await expect(meter).toHaveAttribute('aria-valuenow', '90')
   })
 
   test('the page loads without console errors', async ({ app }) => {

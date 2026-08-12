@@ -1,23 +1,105 @@
-import type { Portfolio } from '@/lib/types'
+import type { Area, Portfolio } from '@/lib/types'
 
 export function uid(): string {
   return crypto.randomUUID()
 }
 
+/** The ten areas an IEP usually covers. Mirrors the trigger in migration 0002. */
+export const DEFAULT_AREAS: { key: string; label: string }[] = [
+  { key: 'reading', label: 'Reading' },
+  { key: 'writing', label: 'Writing' },
+  { key: 'math', label: 'Mathematics' },
+  { key: 'speech', label: 'Speech & Language' },
+  { key: 'fine_motor', label: 'Fine Motor' },
+  { key: 'gross_motor', label: 'Gross Motor' },
+  { key: 'social', label: 'Social-Emotional' },
+  { key: 'behavior', label: 'Behavior' },
+  { key: 'daily_living', label: 'Daily Living / Self-Help' },
+  { key: 'attention', label: 'Attention & Study Skills' },
+]
+
+export function defaultAreas(): Area[] {
+  return DEFAULT_AREAS.map((a, index) => ({
+    id: uid(),
+    key: a.key,
+    label: a.label,
+    sort: index + 1,
+    is_custom: false,
+  }))
+}
+
 /**
- * The sample year from the design prototype. It backs the "Reset to sample
- * data" action and gives a brand-new account something to look at.
+ * The sample year. It backs "Reset to sample data" and gives a new account
+ * something to look at — a child with an IEP, goals in four areas, and a
+ * handful of sessions recorded against them.
  */
 export function sampledPortfolio(studentId = uid()): Portfolio {
-  const ela = uid()
-  const math = uid()
-  const activity = (
-    subject_key: string,
-    date: string,
+  const areas = defaultAreas()
+  const areaId = (key: string) => areas.find((a) => a.key === key)!.id
+
+  const goals = [
+    {
+      id: uid(),
+      area_id: areaId('reading'),
+      text: 'Given a decodable text, Sofía will read CVC words with 80% accuracy across three consecutive sessions.',
+      status: 'met' as const,
+      source: 'iep' as const,
+      sort: 1,
+    },
+    {
+      id: uid(),
+      area_id: areaId('reading'),
+      text: 'Sofía will retell the beginning, middle and end of a story read aloud, with no more than one prompt.',
+      status: 'in_progress' as const,
+      source: 'iep' as const,
+      sort: 2,
+    },
+    {
+      id: uid(),
+      area_id: areaId('math'),
+      text: 'Sofía will solve addition facts within 20 using counters, with 80% accuracy.',
+      status: 'in_progress' as const,
+      source: 'iep' as const,
+      sort: 3,
+    },
+    {
+      id: uid(),
+      area_id: areaId('fine_motor'),
+      text: 'Sofía will form uppercase letters on a lined page with correct pencil grip for five minutes.',
+      status: 'in_progress' as const,
+      source: 'iep' as const,
+      sort: 4,
+    },
+    {
+      id: uid(),
+      area_id: areaId('social'),
+      text: 'Sofía will take turns in a two-player game for ten minutes without adult redirection.',
+      status: 'not_started' as const,
+      source: 'parent' as const,
+      sort: 5,
+    },
+  ]
+
+  const entry = (
+    goalIndex: number,
     title: string,
-    notes: string,
-    hours: string,
-  ) => ({ id: uid(), subject_key, date, title, notes, hours })
+    method: string,
+    outcome: string,
+    outcome_level: 'full_support' | 'partial_support' | 'independent',
+    date: string,
+    sort: number,
+  ) => ({
+    id: uid(),
+    area_id: goals[goalIndex].area_id,
+    goal_id: goals[goalIndex].id,
+    title,
+    method,
+    outcome,
+    outcome_level,
+    date,
+    hours: '',
+    sort,
+  })
 
   return {
     student: {
@@ -31,61 +113,69 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
       evaluator: 'Karen Whitfield, FL cert. #718402',
       evaluation_date: '2026-06-05',
       statement:
-        'Sofía completed her first-grade year at home with steady, visible growth. She began the year reading three-letter words with support and finished reading early chapter books aloud without help. Mathematics moved from counting objects to addition and subtraction within twenty, with measurement introduced in the spring. Both subjects are documented activity by activity in the log below.',
+        'Sofía completed her first-grade year at home working from the goals in her IEP. She began the year decoding CVC words with prompting and finished reading them independently. Mathematics and fine motor both moved from full support to partial support. Each goal below records the method used and how she responded.',
+      diagnosis: 'Specific learning disability in reading (dyslexia)',
+      diagnosis_date: '2025-05-19',
+      diagnosed_by: 'Miami-Dade County Public Schools, district evaluation team',
+      no_formal_diagnosis: false,
+      strengths:
+        'Strong listening comprehension and vocabulary. Persists with a task when it is broken into short steps. Loves being read to.',
+      needs:
+        'Decoding and phonological awareness. Fine-motor endurance for writing. Needs movement breaks roughly every fifteen minutes.',
+      learns_best:
+        'Multisensory work — letter tiles, sand tray, saying the sound while writing it. One instruction at a time, modelled first.',
+      include_profile: true,
+      show_dates: true,
+      show_hours: false,
+      show_activity_log: false,
     },
-    subjects: [
-      { id: ela, key: 'ela', label: 'Language Arts', sort: 1 },
-      { id: math, key: 'math', label: 'Mathematics', sort: 2 },
-    ],
-    activities: [
-      activity(
-        'ela',
-        '2025-09-08',
+    areas,
+    goals,
+    entries: [
+      entry(
+        0,
         'Short vowel word families',
-        'Explode the Code pp. 12–20; built -at, -op, -in words with letter tiles.',
-        '1.5',
+        'Letter tiles for -at, -op and -in; built each word, said the sounds, then read the list back.',
+        'Read 18 of 20 words with no prompting. Self-corrected twice without being asked.',
+        'independent',
+        '2025-09-08',
+        1,
       ),
-      activity(
-        'ela',
-        '2025-11-14',
-        'Sentence writing and capitals',
-        'Wrote four sentences about the beach trip; edited for capitals and periods.',
-        '1',
-      ),
-      activity(
-        'ela',
+      entry(
+        0,
+        'Decodable text, first read',
+        'Read a six-page decodable book aloud, one sentence at a time, finger tracking.',
+        'Needed a prompt on three words. Accuracy above the goal line for a third consecutive session — goal met.',
+        'independent',
         '2026-02-03',
-        'Reading aloud, early chapter books',
-        'Read two chapters of Frog and Toad unassisted; retold the plot in her own words.',
-        '1.25',
+        2,
       ),
-      activity(
-        'ela',
-        '2026-04-21',
-        'Poetry recitation',
-        'Memorized and recited "The Swing" for the family.',
-        '0.75',
+      entry(
+        1,
+        'Retelling — Owl Moon',
+        'Read aloud together, then retold with a three-picture sequencing strip as support.',
+        'Gave beginning and end unprompted; needed one prompt for the middle.',
+        'partial_support',
+        '2026-05-12',
+        3,
       ),
-      activity(
-        'math',
-        '2025-09-16',
-        'Counting and place value to 100',
-        'Hundred chart, skip counting by 2s, 5s and 10s.',
-        '1',
-      ),
-      activity(
-        'math',
-        '2025-12-02',
+      entry(
+        2,
         'Addition within 20',
-        'Number bonds with counters; timed practice sheet, 18/20 correct.',
-        '1',
+        'Number bonds with counters, then a written practice sheet.',
+        '18 of 20 correct with counters available. Still counts on fingers when the sheet is removed.',
+        'partial_support',
+        '2025-12-02',
+        4,
       ),
-      activity(
-        'math',
+      entry(
+        3,
+        'Uppercase letter formation',
+        'Handwriting Without Tears slate, then a lined page. Five-minute timer.',
+        'Held the grip for the full five minutes for the first time. Letters E, F and L still reversed.',
+        'partial_support',
         '2026-03-10',
-        'Measurement with non-standard units',
-        'Measured the kitchen in shoe-lengths and recorded results in a table.',
-        '1.5',
+        5,
       ),
     ],
     curriculums: [
@@ -93,7 +183,7 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
         id: uid(),
         title: 'Explode the Code, Books 1–2',
         publisher: 'Educators Publishing Service',
-        subject: 'ela',
+        area_id: areaId('reading'),
         usage: 'Core phonics — three lessons a week, September through March',
         sort: 1,
       },
@@ -101,7 +191,7 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
         id: uid(),
         title: 'All About Reading, Level 1',
         publisher: 'All About Learning Press',
-        subject: 'ela',
+        area_id: areaId('reading'),
         usage: 'Reading fluency and decoding practice, full year',
         sort: 2,
       },
@@ -109,7 +199,7 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
         id: uid(),
         title: 'Handwriting Without Tears — First Grade',
         publisher: 'Learning Without Tears',
-        subject: 'ela',
+        area_id: areaId('fine_motor'),
         usage: 'Daily handwriting, ten minutes',
         sort: 3,
       },
@@ -117,25 +207,9 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
         id: uid(),
         title: 'Math-U-See Alpha',
         publisher: 'Demme Learning',
-        subject: 'math',
+        area_id: areaId('math'),
         usage: 'Core mathematics with manipulatives, full year',
         sort: 4,
-      },
-      {
-        id: uid(),
-        title: 'Kitchen Table Math, Book 1',
-        publisher: 'Chris Wright',
-        subject: 'math',
-        usage: 'Supplement for measurement and word problems, spring term',
-        sort: 5,
-      },
-      {
-        id: uid(),
-        title: 'Ambleside Online Year 1 book list',
-        publisher: 'Ambleside Online (free curriculum)',
-        subject: 'other',
-        usage: 'Read-aloud and narration spine for the reading list below',
-        sort: 6,
       },
     ],
     books: [
@@ -145,6 +219,7 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
         author: 'Arnold Lobel',
         finished_on: '2025-10-02',
         how_read: 'Read independently',
+        sort: 1,
       },
       {
         id: uid(),
@@ -152,6 +227,7 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
         author: 'Munro Leaf',
         finished_on: '2025-11-19',
         how_read: 'Read aloud together',
+        sort: 2,
       },
       {
         id: uid(),
@@ -159,20 +235,7 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
         author: 'Robert McCloskey',
         finished_on: '2025-12-15',
         how_read: 'Read aloud together',
-      },
-      {
-        id: uid(),
-        title: 'Henry and Mudge: The First Book',
-        author: 'Cynthia Rylant',
-        finished_on: '2026-01-28',
-        how_read: 'Read independently',
-      },
-      {
-        id: uid(),
-        title: 'A Tree Is Nice',
-        author: 'Janice May Udry',
-        finished_on: '2026-03-04',
-        how_read: 'Read aloud together',
+        sort: 3,
       },
       {
         id: uid(),
@@ -180,43 +243,41 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
         author: 'Jane Yolen',
         finished_on: '2026-05-12',
         how_read: 'Read independently',
+        sort: 4,
       },
     ],
     workSamples: [
       {
         id: uid(),
-        title: 'Handwriting page — capital letters',
-        subject: 'ela',
+        title: 'Word family sort — -at, -op, -in',
+        area_id: areaId('reading'),
+        goal_id: goals[0].id,
         date: '2025-09-25',
         storage_path: null,
         mime: null,
+        sort: 1,
         url: null,
       },
       {
         id: uid(),
         title: 'Addition within 20, practice sheet',
-        subject: 'math',
+        area_id: areaId('math'),
+        goal_id: goals[2].id,
         date: '2025-12-02',
         storage_path: null,
         mime: null,
+        sort: 2,
         url: null,
       },
       {
         id: uid(),
-        title: 'Narrated drawing — Owl Moon retelling',
-        subject: 'ela',
-        date: '2026-05-14',
-        storage_path: null,
-        mime: null,
-        url: null,
-      },
-      {
-        id: uid(),
-        title: 'Measurement table — kitchen in shoe-lengths',
-        subject: 'math',
+        title: 'Handwriting page — capital letters',
+        area_id: areaId('fine_motor'),
+        goal_id: goals[3].id,
         date: '2026-03-10',
         storage_path: null,
         mime: null,
+        sort: 3,
         url: null,
       },
     ],
@@ -226,7 +287,7 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
         title: 'Individualized Education Program (IEP) 2025–2026',
         kind: 'IEP',
         document_date: '2025-08-22',
-        note: 'Annual IEP from Miami-Dade County Public Schools; goals in reading fluency and fine-motor writing carried into the home program.',
+        note: 'Annual IEP from Miami-Dade County Public Schools. The goals below were transcribed from it.',
         storage_path: null,
         file_name: 'IEP-2025-2026.pdf',
         mime: 'application/pdf',
@@ -234,5 +295,23 @@ export function sampledPortfolio(studentId = uid()): Portfolio {
         url: null,
       },
     ],
+    evaluations: [
+      {
+        id: uid(),
+        title: 'District psychoeducational evaluation',
+        kind: 'Psychoeducational',
+        evaluation_date: '2025-05-19',
+        performed_by: 'Miami-Dade County Public Schools',
+        summary:
+          'Average verbal comprehension with weakness in phonological processing. Eligible for services under specific learning disability. Recommends multisensory structured literacy and extended time.',
+        storage_path: null,
+        file_name: null,
+        mime: null,
+        size_bytes: null,
+        sort: 1,
+        url: null,
+      },
+    ],
+    attachments: [],
   }
 }

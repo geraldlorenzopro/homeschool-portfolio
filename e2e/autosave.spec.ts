@@ -40,14 +40,13 @@ test.describe('Autosave and persistence', () => {
   })
 
   test('entries added in one session are there in the next', async ({ app }) => {
-    await openSection(app, 'Language Arts')
+    await openSection(app, 'Sessions')
     await app.getByLabel('What was covered').fill('Dictation practice')
-    await app.getByLabel('Hours').fill('1')
-    await app.getByRole('button', { name: 'Add to Language Arts' }).click()
+    await app.getByRole('button', { name: 'Add entry' }).click()
     await expect(app.locator('tbody tr', { hasText: 'Dictation practice' })).toBeVisible()
 
     await app.reload()
-    await openSection(app, 'Language Arts')
+    await openSection(app, 'Sessions')
     await expect(app.locator('tbody tr', { hasText: 'Dictation practice' })).toBeVisible()
   })
 

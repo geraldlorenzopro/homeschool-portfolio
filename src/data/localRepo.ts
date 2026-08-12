@@ -1,22 +1,17 @@
 import { readAsDataUrl } from '@/lib/image'
 import { prepareUpload } from '@/lib/upload'
 import type { Portfolio, Student } from '@/lib/types'
-import {
-  type NewActivity,
-  type NewBook,
-  type NewCurriculum,
-  type NewSupportDocument,
-  type NewWorkSample,
-  type Repo,
-} from './repo'
+import type { CollectionKey, NewRow, Repo, RowPatch, Rows } from './repo'
+import { BUCKET } from './repo'
 import { sampledPortfolio, uid } from './seed'
 
-const KEY = 'homeschool-portfolio-fl-v1'
+const KEY = 'homeschool-portfolio-fl-v2'
+
+type AnyRow = { id: string; sort?: number; url?: string | null }
 
 /**
  * Demo backend. Keeps the whole portfolio in localStorage, with uploads held
- * as data URLs — the same thing the HTML prototype did. Used only when no
- * Supabase project is configured; the Supabase repo is the real one.
+ * as data URLs. Used only when no Supabase project is configured.
  */
 export function createLocalRepo(): Repo {
   function read(): Portfolio {
@@ -47,10 +42,20 @@ export function createLocalRepo(): Repo {
     write(data)
   }
 
+  function list<K extends CollectionKey>(data: Portfolio, collection: K): AnyRow[] {
+    return data[collection] as unknown as AnyRow[]
+  }
+
   /** Same validation and downscaling as the real backend, stored inline. */
-  async function toStored(file: File): Promise<{ url: string; mime: string; size: number }> {
+  async function store(file: File) {
     const { blob, mime } = await prepareUpload(file)
-    return { url: await readAsDataUrl(blob), mime, size: blob.size }
+    return {
+      url: await readAsDataUrl(blob),
+      mime,
+      size_bytes: blob.size,
+      file_name: file.name,
+      storage_path: file.name,
+    }
   }
 
   return {
@@ -66,75 +71,56 @@ export function createLocalRepo(): Repo {
       })
     },
 
-    async addActivity(input: NewActivity) {
+    async add<K extends CollectionKey>(collection: K, input: NewRow<K>, file?: File | null) {
+      const stored = file && BUCKET[collection] ? await store(file) : null
       await mutate((d) => {
-        d.activities.push({ id: uid(), ...input })
-      })
-    },
-    async deleteActivity(id: string) {
-      await mutate((d) => {
-        d.activities = d.activities.filter((a) => a.id !== id)
-      })
-    },
-
-    async addCurriculum(input: NewCurriculum) {
-      await mutate((d) => {
-        d.curriculums.push({ id: uid(), sort: d.curriculums.length + 1, ...input })
-      })
-    },
-    async deleteCurriculum(id: string) {
-      await mutate((d) => {
-        d.curriculums = d.curriculums.filter((c) => c.id !== id)
+        const rows = list(d, collection)
+        const sort = rows.reduce((n, r) => Math.max(n, r.sort ?? 0), 0) + 1
+        rows.push({ id: uid(), sort, ...(input as object), ...(stored ?? {}) } as AnyRow)
       })
     },
 
-    async addBook(input: NewBook) {
+    async update<K extends CollectionKey>(
+      collection: K,
+      id: string,
+      patch: RowPatch<K>,
+      file?: File | null,
+    ) {
+      const stored = file && BUCKET[collection] ? await store(file) : null
       await mutate((d) => {
-        d.books.push({ id: uid(), ...input })
-      })
-    },
-    async deleteBook(id: string) {
-      await mutate((d) => {
-        d.books = d.books.filter((b) => b.id !== id)
-      })
-    },
-
-    async addWorkSample(input: NewWorkSample, file: File | null) {
-      const stored = file ? await toStored(file) : null
-      await mutate((d) => {
-        d.workSamples.push({
-          id: uid(),
-          ...input,
-          storage_path: file ? file.name : null,
-          mime: stored?.mime ?? null,
-          url: stored?.url ?? null,
-        })
-      })
-    },
-    async deleteWorkSample(id: string) {
-      await mutate((d) => {
-        d.workSamples = d.workSamples.filter((w) => w.id !== id)
+        const rows = list(d, collection)
+        const index = rows.findIndex((r) => r.id === id)
+        if (index < 0) return
+        rows[index] = { ...rows[index], ...(patch as object), ...(stored ?? {}) } as AnyRow
       })
     },
 
-    async addSupportDocument(input: NewSupportDocument, file: File | null) {
-      const stored = file ? await toStored(file) : null
+    async remove<K extends CollectionKey>(collection: K, id: string) {
       await mutate((d) => {
-        d.supportDocuments.push({
-          id: uid(),
-          ...input,
-          title: input.title.trim() || (file?.name ?? 'Document'),
-          storage_path: file ? file.name : null,
-          file_name: file?.name ?? null,
-          mime: stored?.mime ?? null,
-          size_bytes: stored?.size ?? null,
-          url: stored?.url ?? null,
-        })
+        const rows = list(d, collection)
+        const index = rows.findIndex((r) => r.id === id)
+        if (index >= 0) rows.splice(index, 1)
+        // A deleted goal must not leave entries pointing at nothing.
+        if (collection === 'goals') {
+          for (const entry of d.entries) if (entry.goal_id === id) entry.goal_id = null
+          for (const sample of d.workSamples) if (sample.goal_id === id) sample.goal_id = null
+        }
+        if (collection === 'areas') {
+          d.goals = d.goals.filter((g) => g.area_id !== id)
+          d.entries = d.entries.filter((e) => e.area_id !== id)
+        }
       })
     },
-    async deleteSupportDocument(id: string) {
+
+    async reorder<K extends CollectionKey>(collection: K, orderedIds: string[]) {
       await mutate((d) => {
-        d.supportDocuments = d.supportDocuments.filter((f) => f.id !== id)
+        const rows = list(d, collection)
+        const rank = new Map(orderedIds.map((rowId, index) => [rowId, index + 1]))
+        for (const row of rows) {
+          const next = rank.get(row.id)
+          if (next !== undefined) row.sort = next
+        }
+        rows.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
       })
     },
 
@@ -143,3 +129,5 @@ export function createLocalRepo(): Repo {
     },
   }
 }
+
+export type { Rows }

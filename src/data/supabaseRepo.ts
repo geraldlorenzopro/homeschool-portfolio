@@ -5,24 +5,15 @@ import {
   type AppSupabaseClient,
 } from '@/lib/supabase'
 import { prepareUpload } from '@/lib/upload'
-import type {
-  Activity,
-  Book,
-  Curriculum,
-  Portfolio,
-  Student,
-  Subject,
-  SupportDocument,
-  WorkSample,
-} from '@/lib/types'
+import type { Portfolio, Student } from '@/lib/types'
 import {
+  BUCKET,
+  TABLE,
   storageKey,
-  type NewActivity,
-  type NewBook,
-  type NewCurriculum,
-  type NewSupportDocument,
-  type NewWorkSample,
+  type CollectionKey,
+  type NewRow,
   type Repo,
+  type RowPatch,
 } from './repo'
 import { sampledPortfolio } from './seed'
 
@@ -32,6 +23,27 @@ function fail(error: { message: string } | null): void {
 
 /** Postgres hands back nulls; every text field in the UI is a plain string. */
 const str = (v: unknown): string => (v == null ? '' : String(v))
+
+/** Date and numeric columns reject '' — the UI's empty value must become null. */
+const NULLABLE_BLANKS = [
+  'date',
+  'dob',
+  'evaluation_date',
+  'finished_on',
+  'document_date',
+  'diagnosis_date',
+  'hours',
+  'outcome_level',
+  'goal_id',
+  'area_id',
+]
+
+function forDatabase(input: Record<string, unknown>): Record<string, unknown> {
+  const body: Record<string, unknown> = { ...input }
+  delete body.url
+  for (const key of NULLABLE_BLANKS) if (body[key] === '') body[key] = null
+  return body
+}
 
 export function createSupabaseRepo(sb: AppSupabaseClient, userId: string): Repo {
   let studentIdPromise: Promise<string> | null = null
@@ -49,11 +61,7 @@ export function createSupabaseRepo(sb: AppSupabaseClient, userId: string): Repo 
         fail(error)
         if (data?.length) return data[0].id as string
 
-        const created = await sb
-          .from('students')
-          .insert({ user_id: userId })
-          .select('id')
-          .single()
+        const created = await sb.from('students').insert({ user_id: userId }).select('id').single()
         fail(created.error)
         return created.data!.id as string
       })().catch((e) => {
@@ -64,22 +72,9 @@ export function createSupabaseRepo(sb: AppSupabaseClient, userId: string): Repo 
     return studentIdPromise
   }
 
-  async function subjectMap(studentId: string): Promise<Subject[]> {
-    const { data, error } = await sb
-      .from('subjects')
-      .select('id, key, label, sort')
-      .eq('student_id', studentId)
-      .order('sort', { ascending: true })
-    fail(error)
-    return (data ?? []) as Subject[]
-  }
-
-  /** Batch-sign a bucket's paths. Falls back to null for anything unsigned. */
-  async function signAll(
-    bucket: string,
-    paths: (string | null)[],
-  ): Promise<Map<string, string>> {
-    const wanted = paths.filter((p): p is string => Boolean(p))
+  /** Batch-sign a bucket's paths so uploads can be shown without going public. */
+  async function signAll(bucket: string, paths: (string | null)[]) {
+    const wanted = [...new Set(paths.filter((p): p is string => Boolean(p)))]
     const signed = new Map<string, string>()
     if (!wanted.length) return signed
     const { data, error } = await sb.storage
@@ -92,26 +87,27 @@ export function createSupabaseRepo(sb: AppSupabaseClient, userId: string): Repo 
     return signed
   }
 
-  async function upload(
-    bucket: string,
-    studentId: string,
-    file: File,
-  ): Promise<{ path: string; mime: string; size: number }> {
+  async function upload(bucket: string, studentId: string, file: File) {
     // Validated, re-encoded and stripped of metadata before it leaves the
     // browser; the bucket's own mime allow-list is the second line of defence.
-    const { blob: body, mime } = await prepareUpload(file)
+    const { blob, mime } = await prepareUpload(file)
     const path = storageKey(userId, studentId, file.name)
     const { error } = await sb.storage
       .from(bucket)
-      .upload(path, body, { contentType: mime, upsert: false })
+      .upload(path, blob, { contentType: mime, upsert: false })
     fail(error)
-    return { path, mime, size: body.size }
+    return { storage_path: path, mime, size_bytes: blob.size, file_name: file.name }
   }
 
-  async function removeObject(bucket: string, path: string | null): Promise<void> {
-    if (!path) return
-    await sb.storage.from(bucket).remove([path])
+  async function fetchAll<T>(studentId: string, table: string, columns = '*'): Promise<T[]> {
+    const { data, error } = await sb.from(table).select(columns).eq('student_id', studentId)
+    fail(error)
+    return (data ?? []) as T[]
   }
+
+  // The rows are still loosely typed at this point, so read `sort` defensively.
+  const bySort = (a: unknown, b: unknown) =>
+    ((a as { sort?: number }).sort ?? 0) - ((b as { sort?: number }).sort ?? 0)
 
   return {
     mode: 'supabase',
@@ -119,51 +115,45 @@ export function createSupabaseRepo(sb: AppSupabaseClient, userId: string): Repo 
     async getPortfolio(): Promise<Portfolio> {
       const studentId = await ensureStudentId()
 
-      const [studentRes, subjects, activitiesRes, curriculumsRes, booksRes, samplesRes, docsRes] =
-        await Promise.all([
-          sb.from('students').select('*').eq('id', studentId).single(),
-          subjectMap(studentId),
-          sb
-            .from('activities')
-            .select('id, subject_id, date, title, notes, hours')
-            .eq('student_id', studentId),
-          sb
-            .from('curriculums')
-            .select('id, title, publisher, subject, usage, sort')
-            .eq('student_id', studentId)
-            .order('sort', { ascending: true }),
-          sb
-            .from('books')
-            .select('id, title, author, finished_on, how_read')
-            .eq('student_id', studentId),
-          sb
-            .from('work_samples')
-            .select('id, title, subject, date, storage_path, mime')
-            .eq('student_id', studentId),
-          sb
-            .from('support_documents')
-            .select(
-              'id, title, kind, document_date, note, storage_path, file_name, mime, size_bytes',
-            )
-            .eq('student_id', studentId),
-        ])
-
+      const studentRes = await sb.from('students').select('*').eq('id', studentId).single()
       fail(studentRes.error)
-      fail(activitiesRes.error)
-      fail(curriculumsRes.error)
-      fail(booksRes.error)
-      fail(samplesRes.error)
-      fail(docsRes.error)
-
-      const keyOf = new Map(subjects.map((s) => [s.id, s.key]))
       const row = studentRes.data!
 
-      const sampleRows = (samplesRes.data ?? []) as WorkSample[]
-      const docRows = (docsRes.data ?? []) as SupportDocument[]
+      const [areas, goals, entries, curriculums, books, workSamples, supportDocuments, evaluations, attachments] =
+        await Promise.all([
+          fetchAll<Record<string, unknown>>(studentId, TABLE.areas),
+          fetchAll<Record<string, unknown>>(studentId, TABLE.goals),
+          fetchAll<Record<string, unknown>>(studentId, TABLE.entries),
+          fetchAll<Record<string, unknown>>(studentId, TABLE.curriculums),
+          fetchAll<Record<string, unknown>>(studentId, TABLE.books),
+          fetchAll<Record<string, unknown>>(studentId, TABLE.workSamples),
+          fetchAll<Record<string, unknown>>(studentId, TABLE.supportDocuments),
+          fetchAll<Record<string, unknown>>(studentId, TABLE.evaluations),
+          fetchAll<Record<string, unknown>>(studentId, TABLE.attachments),
+        ])
+
       const [sampleUrls, docUrls] = await Promise.all([
-        signAll(WORK_SAMPLES_BUCKET, sampleRows.map((w) => w.storage_path)),
-        signAll(SUPPORT_DOCS_BUCKET, docRows.map((f) => f.storage_path)),
+        signAll(
+          WORK_SAMPLES_BUCKET,
+          workSamples.map((w) => w.storage_path as string | null),
+        ),
+        signAll(SUPPORT_DOCS_BUCKET, [
+          ...supportDocuments.map((f) => f.storage_path as string | null),
+          ...evaluations.map((f) => f.storage_path as string | null),
+          ...attachments.map((f) => f.storage_path as string | null),
+        ]),
       ])
+
+      /** Nulls out of Postgres become the empty strings the forms expect. */
+      const text = (r: Record<string, unknown>, ...keys: string[]) => {
+        const out: Record<string, unknown> = { ...r }
+        for (const k of keys) out[k] = str(r[k])
+        return out
+      }
+      const sign = (r: Record<string, unknown>, urls: Map<string, string>) => ({
+        ...r,
+        url: r.storage_path ? (urls.get(r.storage_path as string) ?? null) : null,
+      })
 
       const student: Student = {
         id: row.id,
@@ -176,280 +166,184 @@ export function createSupabaseRepo(sb: AppSupabaseClient, userId: string): Repo 
         evaluator: str(row.evaluator),
         evaluation_date: str(row.evaluation_date),
         statement: str(row.statement),
+        diagnosis: str(row.diagnosis),
+        diagnosis_date: str(row.diagnosis_date),
+        diagnosed_by: str(row.diagnosed_by),
+        no_formal_diagnosis: Boolean(row.no_formal_diagnosis),
+        strengths: str(row.strengths),
+        needs: str(row.needs),
+        learns_best: str(row.learns_best),
+        include_profile: Boolean(row.include_profile),
+        show_dates: row.show_dates !== false,
+        show_hours: Boolean(row.show_hours),
+        show_activity_log: Boolean(row.show_activity_log),
       }
 
       return {
         student,
-        subjects,
-        activities: (activitiesRes.data ?? []).map(
-          (a): Activity => ({
-            id: a.id,
-            subject_key: keyOf.get(a.subject_id) ?? '',
-            date: str(a.date),
-            title: str(a.title),
-            notes: str(a.notes),
-            hours: a.hours == null ? '' : String(a.hours),
-          }),
+        areas: areas.map((a) => text(a, 'key', 'label')).sort(bySort),
+        goals: goals.map((g) => text(g, 'text', 'status', 'source')).sort(bySort),
+        entries: entries
+          .map((e) => ({ ...text(e, 'title', 'method', 'outcome', 'date'), hours: str(e.hours) }))
+          .sort(bySort),
+        curriculums: curriculums.map((c) => text(c, 'title', 'publisher', 'usage')).sort(bySort),
+        books: books.map((b) => text(b, 'title', 'author', 'how_read', 'finished_on')).sort(bySort),
+        workSamples: workSamples
+          .map((w) => sign(text(w, 'title', 'date'), sampleUrls))
+          .sort(bySort),
+        supportDocuments: supportDocuments.map((f) =>
+          sign(text(f, 'title', 'kind', 'note', 'document_date'), docUrls),
         ),
-        curriculums: (curriculumsRes.data ?? []).map(
-          (c): Curriculum => ({
-            id: c.id,
-            title: str(c.title),
-            publisher: str(c.publisher),
-            subject: (c.subject ?? 'ela') as Curriculum['subject'],
-            usage: str(c.usage),
-            sort: c.sort ?? 0,
-          }),
-        ),
-        books: (booksRes.data ?? []).map(
-          (b): Book => ({
-            id: b.id,
-            title: str(b.title),
-            author: str(b.author),
-            finished_on: str(b.finished_on),
-            how_read: str(b.how_read),
-          }),
-        ),
-        workSamples: sampleRows.map((w) => ({
-          ...w,
-          title: str(w.title),
-          date: str(w.date),
-          url: w.storage_path ? (sampleUrls.get(w.storage_path) ?? null) : null,
-        })),
-        supportDocuments: docRows.map((f) => ({
-          ...f,
-          title: str(f.title),
-          note: str(f.note),
-          document_date: str(f.document_date),
-          url: f.storage_path ? (docUrls.get(f.storage_path) ?? null) : null,
-        })),
-      }
+        evaluations: evaluations
+          .map((f) =>
+            sign(text(f, 'title', 'kind', 'performed_by', 'summary', 'evaluation_date'), docUrls),
+          )
+          .sort(bySort),
+        attachments: attachments.map((f) => sign(text(f, 'title', 'owner_type'), docUrls)),
+      } as unknown as Portfolio
     },
 
     async updateStudent(patch) {
       const studentId = await ensureStudentId()
-      // Empty date inputs must reach Postgres as null, not ''.
-      const body: Record<string, unknown> = { ...patch }
-      for (const k of ['dob', 'evaluation_date']) {
-        if (body[k] === '') body[k] = null
-      }
-      const { error } = await sb.from('students').update(body).eq('id', studentId)
+      const { error } = await sb
+        .from('students')
+        .update(forDatabase(patch as Record<string, unknown>))
+        .eq('id', studentId)
       fail(error)
     },
 
-    async addActivity(input: NewActivity) {
+    async add<K extends CollectionKey>(collection: K, input: NewRow<K>, file?: File | null) {
       const studentId = await ensureStudentId()
-      const subjects = await subjectMap(studentId)
-      const subject = subjects.find((s) => s.key === input.subject_key)
-      if (!subject) throw new Error(`Unknown subject "${input.subject_key}".`)
-      const { error } = await sb.from('activities').insert({
-        student_id: studentId,
-        subject_id: subject.id,
-        date: input.date || null,
-        title: input.title,
-        notes: input.notes,
-        hours: input.hours === '' ? null : Number(input.hours),
-      })
-      fail(error)
-    },
-    async deleteActivity(id) {
-      fail((await sb.from('activities').delete().eq('id', id)).error)
-    },
+      const bucket = BUCKET[collection]
+      const uploaded = file && bucket ? await upload(bucket, studentId, file) : null
 
-    async addCurriculum(input: NewCurriculum) {
-      const studentId = await ensureStudentId()
       const { count } = await sb
-        .from('curriculums')
+        .from(TABLE[collection])
         .select('id', { count: 'exact', head: true })
         .eq('student_id', studentId)
-      const { error } = await sb
-        .from('curriculums')
-        .insert({ student_id: studentId, ...input, sort: (count ?? 0) + 1 })
-      fail(error)
-    },
-    async deleteCurriculum(id) {
-      fail((await sb.from('curriculums').delete().eq('id', id)).error)
-    },
 
-    async addBook(input: NewBook) {
-      const studentId = await ensureStudentId()
-      const { error } = await sb
-        .from('books')
-        .insert({ student_id: studentId, ...input, finished_on: input.finished_on || null })
-      fail(error)
-    },
-    async deleteBook(id) {
-      fail((await sb.from('books').delete().eq('id', id)).error)
-    },
-
-    async addWorkSample(input: NewWorkSample, file: File | null) {
-      const studentId = await ensureStudentId()
-      const uploaded = file ? await upload(WORK_SAMPLES_BUCKET, studentId, file) : null
-      const { error } = await sb.from('work_samples').insert({
+      const { error } = await sb.from(TABLE[collection]).insert({
         student_id: studentId,
-        title: input.title,
-        subject: input.subject,
-        date: input.date || null,
-        storage_path: uploaded?.path ?? null,
-        mime: uploaded?.mime ?? null,
+        sort: (count ?? 0) + 1,
+        ...forDatabase(input as Record<string, unknown>),
+        ...(uploaded ?? {}),
       })
-      if (error && uploaded) await removeObject(WORK_SAMPLES_BUCKET, uploaded.path)
+      if (error && uploaded && bucket) {
+        await sb.storage.from(bucket).remove([uploaded.storage_path])
+      }
       fail(error)
-    },
-    async deleteWorkSample(id) {
-      const { data } = await sb.from('work_samples').select('storage_path').eq('id', id).single()
-      fail((await sb.from('work_samples').delete().eq('id', id)).error)
-      await removeObject(WORK_SAMPLES_BUCKET, data?.storage_path ?? null)
     },
 
-    async addSupportDocument(input: NewSupportDocument, file: File | null) {
+    async update<K extends CollectionKey>(
+      collection: K,
+      id: string,
+      patch: RowPatch<K>,
+      file?: File | null,
+    ) {
       const studentId = await ensureStudentId()
-      const uploaded = file ? await upload(SUPPORT_DOCS_BUCKET, studentId, file) : null
-      const { error } = await sb.from('support_documents').insert({
-        student_id: studentId,
-        title: input.title.trim() || (file?.name ?? 'Document'),
-        kind: input.kind,
-        document_date: input.document_date || null,
-        note: input.note,
-        storage_path: uploaded?.path ?? null,
-        file_name: file?.name ?? null,
-        mime: uploaded?.mime ?? null,
-        size_bytes: uploaded?.size ?? null,
-      })
-      if (error && uploaded) await removeObject(SUPPORT_DOCS_BUCKET, uploaded.path)
-      fail(error)
-    },
-    async deleteSupportDocument(id) {
-      const { data } = await sb
-        .from('support_documents')
-        .select('storage_path')
+      const bucket = BUCKET[collection]
+      const uploaded = file && bucket ? await upload(bucket, studentId, file) : null
+
+      // Replacing a file leaves the old object orphaned; clear it out after.
+      let previousPath: string | null = null
+      if (uploaded) {
+        const { data } = await sb.from(TABLE[collection]).select('storage_path').eq('id', id).single()
+        previousPath = (data?.storage_path as string | null) ?? null
+      }
+
+      const { error } = await sb
+        .from(TABLE[collection])
+        .update({ ...forDatabase(patch as Record<string, unknown>), ...(uploaded ?? {}) })
         .eq('id', id)
-        .single()
-      fail((await sb.from('support_documents').delete().eq('id', id)).error)
-      await removeObject(SUPPORT_DOCS_BUCKET, data?.storage_path ?? null)
+      fail(error)
+
+      if (uploaded && previousPath && bucket) {
+        await sb.storage.from(bucket).remove([previousPath])
+      }
+    },
+
+    async remove<K extends CollectionKey>(collection: K, id: string) {
+      const bucket = BUCKET[collection]
+      let path: string | null = null
+      if (bucket) {
+        const { data } = await sb.from(TABLE[collection]).select('storage_path').eq('id', id).single()
+        path = (data?.storage_path as string | null) ?? null
+      }
+      fail((await sb.from(TABLE[collection]).delete().eq('id', id)).error)
+      if (bucket && path) await sb.storage.from(bucket).remove([path])
+    },
+
+    async reorder<K extends CollectionKey>(collection: K, orderedIds: string[]) {
+      // Small lists, and the write must land before the next refetch, so this
+      // stays a straightforward sequence of updates rather than a batch upsert.
+      await Promise.all(
+        orderedIds.map((id, index) =>
+          sb
+            .from(TABLE[collection])
+            .update({ sort: index + 1 })
+            .eq('id', id),
+        ),
+      )
     },
 
     async resetToSample() {
       const studentId = await ensureStudentId()
 
-      // Clear stored objects first, then the rows that point at them.
-      const [samples, docs] = await Promise.all([
-        sb.from('work_samples').select('storage_path').eq('student_id', studentId),
-        sb.from('support_documents').select('storage_path').eq('student_id', studentId),
-      ])
-      const samplePaths = (samples.data ?? [])
-        .map((r) => r.storage_path)
-        .filter((p): p is string => Boolean(p))
-      const docPaths = (docs.data ?? [])
-        .map((r) => r.storage_path)
-        .filter((p): p is string => Boolean(p))
-      if (samplePaths.length) await sb.storage.from(WORK_SAMPLES_BUCKET).remove(samplePaths)
-      if (docPaths.length) await sb.storage.from(SUPPORT_DOCS_BUCKET).remove(docPaths)
+      for (const collection of ['workSamples', 'supportDocuments', 'evaluations', 'attachments'] as const) {
+        const bucket = BUCKET[collection]!
+        const rows = await fetchAll<{ storage_path: string | null }>(
+          studentId,
+          TABLE[collection],
+          'storage_path',
+        )
+        const paths = rows.map((r) => r.storage_path).filter((p): p is string => Boolean(p))
+        if (paths.length) await sb.storage.from(bucket).remove(paths)
+      }
 
+      // Children before parents: entries and samples point at goals and areas.
       for (const table of [
-        'activities',
-        'curriculums',
-        'books',
-        'work_samples',
-        'support_documents',
+        TABLE.attachments,
+        TABLE.entries,
+        TABLE.workSamples,
+        TABLE.goals,
+        TABLE.curriculums,
+        TABLE.books,
+        TABLE.supportDocuments,
+        TABLE.evaluations,
+        TABLE.areas,
       ]) {
         fail((await sb.from(table).delete().eq('student_id', studentId)).error)
       }
 
       const sample = sampledPortfolio(studentId)
-      const subjects = await subjectMap(studentId)
-      const idOf = new Map(subjects.map((s) => [s.key, s.id]))
-
-      const { student } = sample
+      const { id: _id, ...studentFields } = sample.student
       fail(
         (
           await sb
             .from('students')
-            .update({
-              name: student.name,
-              dob: student.dob,
-              grade: student.grade,
-              school_year: student.school_year,
-              parent_name: student.parent_name,
-              county: student.county,
-              evaluator: student.evaluator,
-              evaluation_date: student.evaluation_date,
-              statement: student.statement,
-            })
+            .update(forDatabase(studentFields as unknown as Record<string, unknown>))
             .eq('id', studentId)
         ).error,
       )
 
-      fail(
-        (
-          await sb.from('activities').insert(
-            sample.activities
-              .filter((a) => idOf.has(a.subject_key))
-              .map((a) => ({
-                student_id: studentId,
-                subject_id: idOf.get(a.subject_key)!,
-                date: a.date,
-                title: a.title,
-                notes: a.notes,
-                hours: Number(a.hours),
-              })),
-          )
-        ).error,
-      )
-      fail(
-        (
-          await sb.from('curriculums').insert(
-            sample.curriculums.map((c) => ({
-              student_id: studentId,
-              title: c.title,
-              publisher: c.publisher,
-              subject: c.subject,
-              usage: c.usage,
-              sort: c.sort,
-            })),
-          )
-        ).error,
-      )
-      fail(
-        (
-          await sb.from('books').insert(
-            sample.books.map((b) => ({
-              student_id: studentId,
-              title: b.title,
-              author: b.author,
-              finished_on: b.finished_on,
-              how_read: b.how_read,
-            })),
-          )
-        ).error,
-      )
-      fail(
-        (
-          await sb.from('work_samples').insert(
-            sample.workSamples.map((w) => ({
-              student_id: studentId,
-              title: w.title,
-              subject: w.subject,
-              date: w.date,
-            })),
-          )
-        ).error,
-      )
-      fail(
-        (
-          await sb.from('support_documents').insert(
-            sample.supportDocuments.map((f) => ({
-              student_id: studentId,
-              title: f.title,
-              kind: f.kind,
-              document_date: f.document_date,
-              note: f.note,
-              file_name: f.file_name,
-              mime: f.mime,
-            })),
-          )
-        ).error,
-      )
+      // Ids are carried over verbatim so the sample's cross-references survive.
+      const withStudent = (rows: object[]) =>
+        rows.map((r) => ({ student_id: studentId, ...forDatabase(r as Record<string, unknown>) }))
+
+      for (const collection of [
+        'areas',
+        'goals',
+        'entries',
+        'curriculums',
+        'books',
+        'workSamples',
+        'supportDocuments',
+        'evaluations',
+      ] as const) {
+        const rows = sample[collection] as unknown as object[]
+        if (!rows.length) continue
+        fail((await sb.from(TABLE[collection]).insert(withStudent(rows))).error)
+      }
     },
   }
 }
