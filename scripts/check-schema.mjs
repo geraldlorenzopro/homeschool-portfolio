@@ -35,6 +35,18 @@ const TABLES = {
 /** Fields the app keeps in memory that were never meant to be columns. */
 const NOT_COLUMNS = new Set(['url'])
 
+/**
+ * Columns the repository writes on every insert without any interface asking
+ * for it — `add()` in src/data/supabaseRepo.ts puts both in the body for every
+ * collection. `support_documents` shipped without `sort`, and because no type
+ * declares it, reading types.ts alone could not catch it: PostgREST rejected
+ * the row and "Attach document" failed for months against the real database.
+ */
+const WRITTEN_BY_THE_REPO = ['student_id', 'sort']
+
+/** Everything repo.add() can be called with. The student row is not a collection. */
+const COLLECTION_TABLES = Object.values(TABLES).filter((t) => t !== 'students')
+
 function expectedColumns() {
   const source = readFileSync(join(root, 'src/lib/types.ts'), 'utf8')
   const out = {}
@@ -103,8 +115,9 @@ const problems = []
 
 for (const [table, wanted] of Object.entries(expected)) {
   const have = actual[table] ?? new Set()
-  const missing = wanted.filter((c) => !have.has(c) && c !== 'id')
-  if (missing.length) problems.push(`  ${table}: no column for ${missing.join(', ')}`)
+  const implied = COLLECTION_TABLES.includes(table) ? WRITTEN_BY_THE_REPO : []
+  const missing = [...wanted, ...implied].filter((c) => !have.has(c) && c !== 'id')
+  if (missing.length) problems.push(`  ${table}: no column for ${[...new Set(missing)].join(', ')}`)
 }
 
 if (problems.length) {
