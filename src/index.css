@@ -971,3 +971,56 @@ textarea.lined {
   border-top: 0;
   border-radius: 0 0 10px 0;
 }
+
+/* ── the printed twin of every editable value ─────────────────────────────
+   A form control is the wrong thing to hand a district evaluator. An <input>
+   cannot wrap, so a curriculum title longer than its column prints cut off
+   mid-word — on the one sheet whose statutory job is to designate materials by
+   title. An empty one prints its placeholder, so "mm/dd/yyyy" reads as a date
+   that was never entered. And a <select> prints its chevron.
+
+   So every value is rendered twice: the control for the screen, plain text for
+   the paper. Only one of the two is ever visible. */
+
+.print-only { display: none; }
+
+@media print {
+  .print-only { display: block; }
+
+  .rule-input,
+  .cell-input,
+  .document-meta select,
+  textarea { display: none !important; }
+
+  .rule-printed {
+    display: block;
+    border-bottom: 1px solid var(--color-divider);
+    padding: 2px 0 5px;
+    min-height: 1.1em;
+    font-family: var(--font-heading);
+  }
+  .cell-printed {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 2px 0;
+  }
+  .lined-printed {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+    line-height: 1.7;
+    padding: 2px 0;
+  }
+  /* An empty value leaves an empty line, not a box that reads as unfinished. */
+  .cell-printed:empty,
+  .lined-printed:empty { min-height: 0.9em; }
+
+  /* Furniture that has no business on a legal record. */
+  input[type='date']::-webkit-calendar-picker-indicator { display: none !important; }
+  ::placeholder { color: transparent !important; }
+
+  /* The paper is white. The screen tint is a screen thing. */
+  .sheet { background: #fff; }
+}

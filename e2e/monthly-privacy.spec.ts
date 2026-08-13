@@ -95,6 +95,7 @@ test.describe('The child’s private details', () => {
     const printed = await whatPrints(app)
     expect(printed).toContain('Sofía Ramírez')
     expect(printed).toContain('Maria Example')
-    await expect(app.getByLabel('Date of the Letter of Intent')).toBeVisible()
+    // The control itself is replaced by its printed value, so assert the value.
+    expect(printed).toContain('2025-08-11')
   })
 })

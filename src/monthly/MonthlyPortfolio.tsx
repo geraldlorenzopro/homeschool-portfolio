@@ -3,6 +3,7 @@ import { PdfPages } from '@/components/PdfPages'
 import { CoverBorder } from './CoverBorder'
 import { FilePlate, RemoveButton, ViewButton } from '@/components/ui'
 import { isPdf } from '@/lib/image'
+import { fmtDate } from '@/lib/format'
 import type { Student } from '@/lib/types'
 import {
   CHECKLIST_RECOMMENDED,
@@ -235,6 +236,12 @@ function Rule({
           borderBottomColor: pink ? PINK.rule : undefined,
         }}
       />
+      <span
+        className="print-only rule-printed"
+        style={{ fontSize: size, borderBottomColor: pink ? PINK.rule : undefined }}
+      >
+        {value}
+      </span>
     </label>
   )
 }
@@ -311,7 +318,7 @@ function Cover({
             />
           </div>
 
-          <p className="cover-note">
+          <p className="no-print cover-note">
             One portfolio may be used for more than one child in the same family. Add each
             child’s name above and note whose work each sample belongs to.
           </p>
@@ -449,7 +456,7 @@ function ChildInfo({
           </div>
         </div>
 
-        <p className="sheet-note" style={{ maxWidth: '5.6in', marginTop: -8 }}>
+        <p className="no-print sheet-note" style={{ maxWidth: '5.6in', marginTop: -8 }}>
           The month and day of the Letter of Intent is the annual evaluation deadline every year —
           unless the child stops homeschooling first, in which case the deadline becomes 30 days
           after the Notice of Termination. When moving to another Florida county, use the Transfer
@@ -506,6 +513,7 @@ function ChildInfo({
           value={year.notes}
           onChange={(e) => update({ notes: e.target.value })}
         />
+        <div className="print-only lined-printed">{year.notes}</div>
       </div>
     </section>
   )
@@ -554,7 +562,7 @@ function MonthLog({
         </div>
       </div>
 
-      <p className="sheet-note" style={{ margin: '14px 0 8px', fontSize: 10.5 }}>
+      <p className="no-print sheet-note" style={{ margin: '14px 0 8px', fontSize: 10.5 }}>
         Check the box under the day of the month on which the subject was covered. Days this month
         does not have are struck through.
       </p>
@@ -629,6 +637,7 @@ function MonthLog({
           value={record.reading_materials}
           onChange={(e) => setMonth(month.key, { reading_materials: e.target.value })}
         />
+        <div className="print-only lined-printed">{record.reading_materials}</div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22, marginTop: 18 }}>
@@ -641,6 +650,7 @@ function MonthLog({
             value={record.field_trips}
             onChange={(e) => setMonth(month.key, { field_trips: e.target.value })}
           />
+          <div className="print-only lined-printed">{record.field_trips}</div>
         </div>
         <div>
           <div className="rule-label">Accomplishments this month</div>
@@ -651,6 +661,7 @@ function MonthLog({
             value={record.accomplishments}
             onChange={(e) => setMonth(month.key, { accomplishments: e.target.value })}
           />
+          <div className="print-only lined-printed">{record.accomplishments}</div>
         </div>
       </div>
 
@@ -683,7 +694,7 @@ function CurriculumPage({
       <h2 className="sheet-title" style={{ fontSize: 34, margin: '6px 0 0' }}>
         Curriculums used
       </h2>
-      <p className="sheet-note" style={{ margin: '10px 0 16px', fontSize: 11 }}>
+      <p className="no-print sheet-note" style={{ margin: '10px 0 16px', fontSize: 11 }}>
         Every programme, book, site or app used this school year. Florida asks for the titles of
         the materials — this page is that list.
       </p>
@@ -712,6 +723,7 @@ function CurriculumPage({
                     aria-label="Curriculum title"
                     onChange={(e) => set(row.id, { title: e.target.value })}
                   />
+                  <span className="print-only cell-printed">{row.title}</span>
                 </td>
                 <td>
                   <input
@@ -721,6 +733,7 @@ function CurriculumPage({
                     aria-label="Publisher"
                     onChange={(e) => set(row.id, { publisher: e.target.value })}
                   />
+                  <span className="print-only cell-printed">{row.publisher}</span>
                 </td>
                 <td>
                   <input
@@ -730,6 +743,7 @@ function CurriculumPage({
                     aria-label="Subject"
                     onChange={(e) => set(row.id, { subject: e.target.value })}
                   />
+                  <span className="print-only cell-printed">{row.subject}</span>
                 </td>
                 <td>
                   <input
@@ -739,6 +753,7 @@ function CurriculumPage({
                     aria-label="How it was used"
                     onChange={(e) => set(row.id, { usage: e.target.value })}
                   />
+                  <span className="print-only cell-printed">{row.usage}</span>
                 </td>
                 <td className="no-print">
                   <RemoveButton
@@ -793,7 +808,7 @@ function SamplesPage({
       <h2 className="sheet-title" style={{ fontSize: 34, margin: '6px 0 0' }}>
         Work samples
       </h2>
-      <p className="sheet-note" style={{ margin: '10px 0 16px', fontSize: 11 }}>
+      <p className="no-print sheet-note" style={{ margin: '10px 0 16px', fontSize: 11 }}>
         Photographs of pages, worksheets, drawings, scanned PDFs. Choose as many files as you
         like — each one is filed on its own and you can name it afterwards.
       </p>
@@ -851,6 +866,7 @@ function SamplesPage({
                 aria-label={`Title for ${sample.file_name}`}
                 onChange={(e) => set(sample.id, { title: e.target.value })}
               />
+              <span className="print-only cell-printed">{sample.title}</span>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   className="cell-input"
@@ -859,6 +875,7 @@ function SamplesPage({
                   aria-label={`Subject for ${sample.file_name}`}
                   onChange={(e) => set(sample.id, { subject: e.target.value })}
                 />
+                <span className="print-only cell-printed">{sample.subject}</span>
                 <input
                   className="cell-input"
                   type="date"
@@ -866,6 +883,7 @@ function SamplesPage({
                   aria-label={`Date for ${sample.file_name}`}
                   onChange={(e) => set(sample.id, { sample_date: e.target.value })}
                 />
+                <span className="print-only cell-printed">{sample.sample_date ? fmtDate(sample.sample_date) : ''}</span>
               </div>
               <figcaption
                 className="sample-meta"
@@ -880,6 +898,7 @@ function SamplesPage({
                     mime={sample.mime}
                     title={sample.title || sample.file_name}
                   />
+                <span className="print-only cell-printed">{sample.sample_date ? fmtDate(sample.sample_date) : ''}</span>
                   <button
                     type="button"
                     className="btn btn-ghost"
@@ -935,7 +954,7 @@ function DocumentsPage({
       <h2 className="sheet-title" style={{ fontSize: 34, margin: '6px 0 0' }}>
         Additional documents
       </h2>
-      <p className="sheet-note" style={{ margin: '10px 0 16px', fontSize: 11 }}>
+      <p className="no-print sheet-note" style={{ margin: '10px 0 16px', fontSize: 11 }}>
         The Letter of Intent, the annual evaluation, immunization records, certificates — anything
         else this portfolio has to carry. Each one prints in full at the back.
       </p>
@@ -987,12 +1006,14 @@ function DocumentsPage({
                   aria-label={`Title for ${doc.file_name}`}
                   onChange={(e) => set(doc.id, { title: e.target.value })}
                 />
+                <span className="print-only cell-printed">{doc.title}</span>
                 <div className="no-print" style={{ display: 'flex', alignItems: 'center' }}>
                   <ViewButton
                     url={doc.url}
                     mime={doc.mime}
                     title={doc.title || doc.file_name}
                   />
+                <span className="print-only cell-printed">{doc.title}</span>
                   <button
                     type="button"
                     className="btn btn-ghost"
@@ -1020,6 +1041,7 @@ function DocumentsPage({
                       </option>
                     ))}
                   </select>
+                  <span className="print-only cell-printed kind-printed">{doc.kind}</span>
                 </label>
                 <label>
                   <span className="rule-label">Date</span>
@@ -1030,6 +1052,9 @@ function DocumentsPage({
                     aria-label={`Date of ${doc.file_name}`}
                     onChange={(e) => set(doc.id, { document_date: e.target.value })}
                   />
+                  <span className="print-only cell-printed">
+                    {doc.document_date ? fmtDate(doc.document_date) : ''}
+                  </span>
                 </label>
                 <label style={{ flex: 2 }}>
                   <span className="rule-label">Note</span>
@@ -1040,6 +1065,7 @@ function DocumentsPage({
                     aria-label={`Note on ${doc.file_name}`}
                     onChange={(e) => set(doc.id, { note: e.target.value })}
                   />
+                  <span className="print-only cell-printed">{doc.note}</span>
                 </label>
               </div>
 
