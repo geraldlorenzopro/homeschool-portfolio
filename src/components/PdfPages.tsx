@@ -7,14 +7,34 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
 /**
- * A cap high enough that no real attachment reaches it. The old limit was 12,
- * printed under a line that said "the complete file is attached" — which the
- * paper could not honour, because paper is all the evaluator gets.
+ * High enough that no real attachment reaches it. The old limit was 12, under
+ * a line that said "the complete file is attached" — which paper cannot
+ * honour, because paper is all the evaluator gets.
  */
-const MAX_PAGES = 200
+const MAX_PAGES = 60
 
-/** 2100 px across a 7in column is about 300 dpi — signatures stay readable. */
-const RENDER_WIDTH = 2100
+/**
+ * 1500 px across a 7in column is about 215 dpi: handwriting and signatures
+ * stay legible, and a page costs ~16 MB instead of the ~32 MB that 2100 px
+ * cost. That difference is the difference between a folder that prints and a
+ * browser tab that sits there thinking — a single 40-page scan at the wider
+ * setting wanted the better part of a gigabyte, and every attachment in the
+ * folder starts drawing at once.
+ */
+const RENDER_WIDTH = 1500
+
+/**
+ * One page at a time, across every attachment on the page.
+ *
+ * pdf.js has one worker, so parallel callers do not draw any faster — they
+ * only multiply the number of half-built canvases held in memory at once.
+ */
+let queue: Promise<unknown> = Promise.resolve()
+function enqueue<T>(job: () => Promise<T>): Promise<T> {
+  const run = queue.then(job, job)
+  queue = run.catch(() => undefined)
+  return run
+}
 
 /** Draws `count` pages of a PDF into `host`. Returns the document's page total. */
 async function drawPages(
@@ -29,19 +49,25 @@ async function drawPages(
   if (cancelled()) return doc.numPages
   const shown = Math.min(doc.numPages, count)
 
+  // A canvas costs width² × 1.3 × 4 bytes. At 1500 px that is ~16 MB a page,
+  // which a thirty-page scan turns into half a gigabyte — and every
+  // attachment in the folder starts drawing at once. Long documents step
+  // down to about 157 dpi, which still reads a workbook page cleanly.
+  const effective = shown > 8 ? Math.round(width * 0.73) : width
+
   for (let n = 1; n <= shown; n++) {
     const page = await doc.getPage(n)
     if (cancelled()) return doc.numPages
 
     const base = page.getViewport({ scale: 1 })
-    const viewport = page.getViewport({ scale: width / base.width })
+    const viewport = page.getViewport({ scale: effective / base.width })
     const canvas = document.createElement('canvas')
     canvas.width = viewport.width
     canvas.height = viewport.height
     const context = canvas.getContext('2d')
     if (!context) continue
 
-    await page.render({ canvas, canvasContext: context, viewport }).promise
+    await enqueue(() => page.render({ canvas, canvasContext: context, viewport }).promise)
     if (cancelled()) return doc.numPages
     host.appendChild(canvas)
     onPage(n)
@@ -93,6 +119,11 @@ export function PdfPages({ url, label }: { url: string; label: string }) {
         <p className="pdf-note">
           {label} could not be rendered here. The file itself is still attached to this
           portfolio.
+        </p>
+      )}
+      {state === 'loading' && pages > 0 && (
+        <p className="pdf-note no-print">
+          {label} — page {pages} drawn…
         </p>
       )}
       {state === 'ready' && total > pages && (

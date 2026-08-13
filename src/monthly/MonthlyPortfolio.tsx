@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
-import { waitForPrintReady } from '@/lib/printReady'
+import { loadEverything, printState, waitForPrintReady } from '@/lib/printReady'
 import { PdfPages } from '@/components/PdfPages'
 import { CoverBorder } from './CoverBorder'
 import { FilePlate, RemoveButton, ViewButton } from '@/components/ui'
@@ -74,6 +74,7 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
   // them, and printing early yields blank pages — the one failure mode of
   // this feature that the parent would only discover on paper.
   const [missing, setMissing] = useState(0)
+  const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => {
     if (!printing) return
@@ -85,13 +86,16 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
       await reload()
       if (cancelled) return
 
+      loadEverything()
+      const ticker = window.setInterval(() => setPendingCount(printState().pending), 400)
       const state = await waitForPrintReady()
+      window.clearInterval(ticker)
       if (cancelled) return
 
       // A portfolio that prints with its evidence missing is worse than one
       // that refuses to print, so this stops and says which is wrong.
-      if (state.broken > 0) {
-        setMissing(state.broken)
+      if (state.broken > 0 || state.timedOut) {
+        setMissing(state.broken || state.pending)
         setPrinting(null)
         return
       }
@@ -281,7 +285,7 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
           {printing && (
             <span className="save-state" data-dirty="true" role="status">
               {printing === 'folder'
-                ? 'Drawing every page of the folder…'
+                ? `Drawing the folder — ${pendingCount} still to go…`
                 : 'Drawing this sheet…'}
             </span>
           )}

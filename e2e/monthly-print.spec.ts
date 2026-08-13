@@ -129,3 +129,32 @@ test.describe('Printing refuses to lose evidence', () => {
     expect((await printState(app)).calls).toBe(0)
   })
 })
+
+test.describe('Printing a full folder', () => {
+  test('a sheet full of photographs below the fold does not hang the print', async ({ app }) => {
+    await openMonthly(app)
+    await app.locator('.section-link', { hasText: 'Work samples' }).click()
+
+    // Enough that most of them sit far outside the viewport once the whole
+    // folder is mounted — which is where lazy loading quietly stops.
+    await app.getByLabel('Work sample files').setInputFiles(
+      Array.from({ length: 12 }, (_, i) => ({
+        name: `sample ${i + 1}.png`,
+        mimeType: 'image/png',
+        buffer: PNG_1PX,
+      })),
+    )
+    await expect(app.locator('.sample-card')).toHaveCount(12)
+
+    // The trap: a lazy image below the fold never loads, so a readiness check
+    // that waits for it waits for ever. Both sides sat expecting the other.
+    expect(await app.locator('img[loading="lazy"]').count()).toBeGreaterThan(0)
+
+    await watchPrint(app)
+    await app.getByRole('button', { name: /Print the whole folder/ }).click()
+    await expect.poll(async () => (await printState(app)).calls, { timeout: 45_000 }).toBe(1)
+
+    expect((await printState(app)).pending).toBe(0)
+    await expect(app.getByRole('alert')).toHaveCount(0)
+  })
+})

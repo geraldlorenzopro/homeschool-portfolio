@@ -1,3 +1,18 @@
+/**
+ * Tells every lazy image to load now.
+ *
+ * Photographs are lazy on purpose — a folder of twenty-nine work samples
+ * should not fetch them all to show the cover. But a lazy image below the
+ * fold never loads, and waiting for one is waiting forever: printing the
+ * whole folder mounts seventeen sheets, so almost every sample sits far off
+ * screen. The wait and the browser each sat there expecting the other.
+ */
+export function loadEverything(root: ParentNode = document): void {
+  for (const img of root.querySelectorAll('img[loading="lazy"]')) {
+    ;(img as HTMLImageElement).loading = 'eager'
+  }
+}
+
 /** What is still being drawn, and what will never draw at all. */
 export interface PrintState {
   /** Canvases and images still working. Wait for these. */
@@ -29,8 +44,8 @@ export function printState(root: ParentNode = document): PrintState {
  */
 export async function waitForPrintReady(
   root: ParentNode = document,
-  timeoutMs = 60_000,
-): Promise<PrintState> {
+  timeoutMs = 180_000,
+): Promise<PrintState & { timedOut: boolean }> {
   const started = Date.now()
   // Two clean passes in a row: a renderer that finishes one page and starts
   // the next would otherwise look idle for an instant.
@@ -39,8 +54,10 @@ export async function waitForPrintReady(
   while (Date.now() - started < timeoutMs) {
     state = printState(root)
     clean = state.pending === 0 ? clean + 1 : 0
-    if (clean >= 2) return state
+    if (clean >= 2) return { ...state, timedOut: false }
     await new Promise((resolve) => setTimeout(resolve, 150))
   }
-  return state
+  // Out of time with work outstanding. Printing now would put blank paper
+  // where the child's work goes, which is the whole failure this guards.
+  return { ...state, timedOut: true }
 }
