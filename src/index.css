@@ -1024,3 +1024,16 @@ textarea.lined {
   /* The paper is white. The screen tint is a screen thing. */
   .sheet { background: #fff; }
 }
+
+/* The footer sits on the foot of the sheet, whatever the sheet holds. */
+.sheet-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+.cover-sheet .sheet-foot { padding-top: 0; }
+@media print {
+  .sheet-foot { break-inside: avoid; }
+}

@@ -24,7 +24,7 @@ const YEAR_LABEL = '2025–2026'
 
 /** Fields of the year record the forms can edit. */
 export type YearPatch = Partial<
-  Omit<MonthlyYear, 'subjects' | 'subject_ids' | 'months' | 'cover_photo' | 'label'>
+  Omit<MonthlyYear, 'subjects' | 'subject_ids' | 'months' | 'cover_photo'>
 >
 export type MonthPatch = Partial<Omit<MonthRecord, 'marks'>>
 export type CurriculumPatch = Partial<Omit<MonthlyCurriculum, 'id'>>
@@ -293,11 +293,15 @@ function createSupabaseMonthlyRepo(sb: AppSupabaseClient): MonthlyRepo {
     const cached = yearIds.get(studentId)
     if (cached) return cached
 
+    // By student, not by label. The label is the parent's to edit — a year
+    // that ran August to June is not called 2025–2026 in every household —
+    // and looking it up by name meant renaming it silently started a second,
+    // empty year and left the real one behind.
     const found = await db
       .from('school_years')
       .select('id')
       .eq('student_id', studentId)
-      .eq('label', YEAR_LABEL)
+      .order('created_at', { ascending: true })
       .limit(1)
     fail(found.error)
 
@@ -366,7 +370,7 @@ function createSupabaseMonthlyRepo(sb: AppSupabaseClient): MonthlyRepo {
       year.address = str(row.address)
       year.city = str(row.city)
       year.zip = str(row.zip)
-      year.county = str(row.county) || 'Broward'
+      year.county = str(row.county)
       year.belongs_to_me = str(row.belongs_to_me)
       year.notes = str(row.notes)
       year.checklist = (row.checklist as Record<string, boolean>) ?? {}

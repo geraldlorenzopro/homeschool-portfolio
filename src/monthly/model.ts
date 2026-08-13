@@ -148,7 +148,7 @@ export function blankYear(): MonthlyYear {
     address: '',
     city: '',
     zip: '',
-    county: 'Broward',
+    county: '',
     belongs_to_me: '',
     notes: '',
     cover_photo: null,

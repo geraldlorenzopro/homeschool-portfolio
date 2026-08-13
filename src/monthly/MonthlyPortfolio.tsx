@@ -30,6 +30,17 @@ const PINK = {
 
 type PageKey = 'cover' | 'record' | 'child' | string
 
+/** The folder in the order it prints — and what "sheet 4 of 17" counts. */
+const SHEETS: PageKey[] = [
+  'cover',
+  'record',
+  'child',
+  ...MONTHS.map((m) => m.key),
+  'curriculum',
+  'samples',
+  'documents',
+]
+
 export function MonthlyPortfolio({ student }: { student: Student }) {
   const {
     year,
@@ -161,6 +172,7 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
         {page === 'curriculum' && (
           <CurriculumPage
             year={year}
+            student={student}
             add={addCurriculum}
             set={setCurriculum}
             remove={removeCurriculum}
@@ -169,6 +181,7 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
         {page === 'samples' && (
           <SamplesPage
             year={year}
+            student={student}
             add={addSamples}
             set={setSample}
             remove={removeSample}
@@ -178,6 +191,7 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
         {page === 'documents' && (
           <DocumentsPage
             year={year}
+            student={student}
             add={addDocuments}
             set={setDocument}
             remove={removeDocument}
@@ -263,7 +277,7 @@ function Cover({
       <div className="cover-frame">
         <div className="cover-inner">
           <div className="cover-kicker">
-            Florida Statute 1002.41 · {year.county || 'Broward'} County
+            Florida Statute 1002.41{year.county ? ` · ${year.county} County` : ''}
           </div>
           <h1 className="cover-title">
             Home Education
@@ -325,7 +339,56 @@ function Cover({
 
         </div>
       </div>
+      <SheetFoot
+        student={student}
+        year={year}
+        sheet="Cover"
+        index={SHEETS.indexOf('cover') + 1}
+        total={SHEETS.length}
+      />
     </section>
+  )
+}
+
+/**
+ * The footer every sheet carries.
+ *
+ * A folder gets photocopied, stapled, carried between desks and put down. Six
+ * of the twenty pages named no child at all, and nothing said which folder a
+ * loose page belonged to or when it was printed — so two versions of the same
+ * portfolio were indistinguishable on paper.
+ *
+ * The date is the day it was printed, formatted the long way: 08/09/2026 is
+ * two different days depending on who reads it.
+ */
+function SheetFoot({
+  student,
+  year,
+  sheet,
+  index,
+  total,
+}: {
+  student: Student
+  year: MonthlyYear
+  sheet: string
+  index: number
+  total: number
+}) {
+  const printed = new Date().toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+  return (
+    <p className="sheet-footnote sheet-foot">
+      <span>
+        {student.name} · Home Education Portfolio{year.label ? ` ${year.label}` : ''}
+        {year.county ? ` · ${year.county} County, Florida` : ' · Florida'}
+      </span>
+      <span>
+        {sheet} · sheet {index} of {total} · printed {printed}
+      </span>
+    </p>
   )
 }
 
@@ -357,6 +420,23 @@ function RecordPage({
       <hr className="hr" style={{ margin: '18px 0 22px' }} />
 
       <div style={{ display: 'flex', gap: 34 }}>
+        <Rule
+          label="School year"
+          value={year.label}
+          onChange={(v) => update({ label: v })}
+          placeholder="2025–2026"
+          size={15}
+        />
+        <Rule
+          label="County"
+          value={year.county}
+          onChange={(v) => update({ county: v })}
+          placeholder="The district this portfolio answers to"
+          size={15}
+        />
+      </div>
+
+      <div style={{ display: 'flex', gap: 34, marginTop: 22 }}>
         <Rule
           label="From"
           value={year.from_date}
@@ -408,6 +488,13 @@ function RecordPage({
         several years of homeschooling it may be an old document. School districts may not add
         requirements beyond those set in state law.
       </p>
+      <SheetFoot
+        student={student}
+        year={year}
+        sheet="Portfolio record"
+        index={SHEETS.indexOf('record') + 1}
+        total={SHEETS.length}
+      />
     </section>
   )
 }
@@ -515,6 +602,13 @@ function ChildInfo({
         />
         <div className="print-only lined-printed">{year.notes}</div>
       </div>
+      <SheetFoot
+        student={student}
+        year={year}
+        sheet="Child’s information"
+        index={SHEETS.indexOf('child') + 1}
+        total={SHEETS.length}
+      />
     </section>
   )
 }
@@ -665,9 +759,13 @@ function MonthLog({
         </div>
       </div>
 
-      <p className="sheet-footnote">
-        Home Education Portfolio · {year.county || 'Broward'} County, Florida — {month.label}
-      </p>
+      <SheetFoot
+        student={student}
+        year={year}
+        sheet={month.label}
+        index={SHEETS.indexOf(month.key) + 1}
+        total={SHEETS.length}
+      />
     </section>
   )
 }
@@ -679,11 +777,13 @@ function MonthLog({
  */
 function CurriculumPage({
   year,
+  student,
   add,
   set,
   remove,
 }: {
   year: MonthlyYear
+  student: Student
   add: () => void
   set: (id: string, patch: Partial<MonthlyCurriculum>) => void
   remove: (id: string) => void
@@ -770,6 +870,13 @@ function CurriculumPage({
       <button type="button" className="btn no-print" style={{ marginTop: 14 }} onClick={add}>
         + Add curriculum
       </button>
+      <SheetFoot
+        student={student}
+        year={year}
+        sheet="Curriculums used"
+        index={SHEETS.indexOf('curriculum') + 1}
+        total={SHEETS.length}
+      />
     </section>
   )
 }
@@ -784,12 +891,14 @@ function CurriculumPage({
  */
 function SamplesPage({
   year,
+  student,
   add,
   set,
   remove,
   busy,
 }: {
   year: MonthlyYear
+  student: Student
   add: (files: File[]) => void
   set: (id: string, patch: Partial<MonthlySample>) => void
   remove: (id: string) => void
@@ -915,6 +1024,13 @@ function SamplesPage({
         </div>
       )}
 
+      <SheetFoot
+        student={student}
+        year={year}
+        sheet="Work samples"
+        index={SHEETS.indexOf('samples') + 1}
+        total={SHEETS.length}
+      />
     </section>
   )
 }
@@ -930,12 +1046,14 @@ function SamplesPage({
  */
 function DocumentsPage({
   year,
+  student,
   add,
   set,
   remove,
   busy,
 }: {
   year: MonthlyYear
+  student: Student
   add: (files: File[]) => void
   set: (id: string, patch: Partial<MonthlyDocument>) => void
   remove: (id: string) => void
@@ -1086,6 +1204,13 @@ function DocumentsPage({
           ))}
         </div>
       )}
+      <SheetFoot
+        student={student}
+        year={year}
+        sheet="Additional documents"
+        index={SHEETS.indexOf('documents') + 1}
+        total={SHEETS.length}
+      />
     </section>
   )
 }
