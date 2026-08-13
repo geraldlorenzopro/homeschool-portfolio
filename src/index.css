@@ -881,22 +881,22 @@ textarea.lined {
      and the browser adds nothing around it. Without this the paper box has
      Chrome's default half-inch margin, the cover grows past what is left, and
      a page designed to be one page prints as two. */
-  /* Real paper margins, on every page. They used to live in the sheet's own
-     padding, which works for a sheet that fits on one page and fails the
-     moment anything overflows: page two of the work samples began at 0.00in
-     from the edge of the paper. */
+  /* Zero, and the margin lives in the sheet's own padding instead.
+     A page box with a margin is a page box where Chrome prints its own
+     furniture: the site's URL along the bottom and the date along the top,
+     on every sheet of a legal record. There is no CSS that removes those —
+     only a zero margin suppresses them. */
   @page {
     size: letter;
-    margin: 0.5in;
+    margin: 0;
   }
   .sheet {
     border: 0;
     box-shadow: none;
     border-radius: 0;
-    /* The page box already carries the margin, so the sheet fills it. */
-    width: 7.5in;
-    min-height: 10in;
-    padding: 0;
+    width: 8.5in;
+    min-height: 11in;
+    padding: 0.5in;
     break-after: page;
   }
   .sheet:last-child { break-after: auto; }
@@ -914,10 +914,10 @@ textarea.lined {
   /* Pinned, not merely a minimum: the cover came out one pixel over 11in and
      a single pixel is a whole second sheet of paper. Nothing is lost — the
      cover is a fixed design, and the overflow is that pixel. */
-  .cover-sheet { height: 10in; overflow: hidden; padding: 0; }
+  .cover-sheet { height: 11in; overflow: hidden; padding: 0.42in; }
   /* The printable page is an inch narrower than the sheet was on screen, so
      the corner clusters have to come in with it or they sit on the title. */
-  .cover-corner { width: 1.55in; height: 1.55in; }
+  .cover-corner { width: 1.75in; height: 1.75in; }
   .cover-hint,
   .cover-photo span { display: none; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1099,4 +1099,25 @@ textarea.lined {
   break-inside: avoid;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
+}
+
+/* The table of contents. Sheet number, name, and what is on it. */
+.toc { width: 100%; border-collapse: collapse; }
+.toc td {
+  padding: 2.5px 8px 2.5px 0;
+  border-bottom: 1px solid var(--color-divider);
+  vertical-align: top;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.toc-n { width: 2.2em; color: var(--color-neutral-600); }
+.toc-name { width: 11em; }
+.toc-what { color: var(--color-neutral-700); }
+
+.profile { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.profile dd {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
 }

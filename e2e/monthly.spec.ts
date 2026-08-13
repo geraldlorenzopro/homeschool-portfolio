@@ -106,18 +106,23 @@ test.describe('The monthly log', () => {
     await expect(app.getByLabel('Science on March 2026 3', { exact: true })).toBeVisible()
   })
 
-  test('the statutory checklist ticks and persists', async ({ app }) => {
+  test('the contents page lists every sheet and what is on it', async ({ app }) => {
     await openMonthly(app)
-    await page_(app, 'Portfolio record').click()
-
-    await expect(app.getByText('A complete Florida portfolio must contain')).toBeVisible()
-    const samples = app.getByRole('checkbox').nth(2)
-    await samples.check()
+    await page_(app, 'January 2026').click()
+    await app.getByLabel('Language Arts on January 2026 14').check()
+    await app.getByLabel('Titles of Reading Materials').fill('Frog and Toad')
     await app.waitForTimeout(600)
 
-    await app.reload()
-    await page_(app, 'Portfolio record').click()
-    await expect(app.getByRole('checkbox').nth(2)).toBeChecked()
+    await page_(app, 'Table of contents').click()
+    const rows = app.locator('.toc tr')
+    // Cover, contents, child, eleven months, curriculum, samples, documents.
+    await expect(rows).toHaveCount(17)
+
+    // Counted from the record, never typed: the January row has to know.
+    const january = rows.filter({ hasText: 'January 2026' })
+    await expect(january).toContainText('1 subject-day across 1 subject')
+    await expect(january).toContainText('reading titles')
+    await expect(rows.filter({ hasText: 'Work samples' })).toContainText('None yet')
   })
 
   test('monthly notes are kept per month', async ({ app }) => {

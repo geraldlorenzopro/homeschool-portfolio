@@ -7,8 +7,6 @@ import { isImage, isPdf } from '@/lib/image'
 import { fmtDate } from '@/lib/format'
 import type { Student } from '@/lib/types'
 import {
-  CHECKLIST_RECOMMENDED,
-  CHECKLIST_REQUIRED,
   DOCUMENT_KINDS,
   MONTHS,
   WEEKDAYS,
@@ -118,7 +116,7 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
 
   const pages: { key: PageKey; label: string }[] = [
     { key: 'cover', label: 'Cover' },
-    { key: 'record', label: 'Portfolio record' },
+    { key: 'record', label: 'Table of contents' },
     { key: 'child', label: 'Child’s information' },
     ...MONTHS.map((m) => ({ key: m.key, label: m.label })),
     { key: 'curriculum', label: 'Curriculums used' },
@@ -370,9 +368,6 @@ function Cover({
       <CoverBorder />
       <div className="cover-frame">
         <div className="cover-inner">
-          <div className="cover-kicker">
-            Florida Statute 1002.41{year.county ? ` · ${year.county} County` : ''}
-          </div>
           <h1 className="cover-title">
             Home Education
             <br />
@@ -444,6 +439,43 @@ function Cover({
   )
 }
 
+
+/** "3 samples", "one sample", "None" — never a bare 0. */
+function countOf(n: number, one: string, many: string): string {
+  if (n === 0) return `None yet`
+  return `${n} ${n === 1 ? one : many}`
+}
+
+/** What a month sheet actually holds, read from the month. */
+function monthSummary(year: MonthlyYear, key: string): string {
+  const m = year.months[key]
+  if (!m) return 'Nothing recorded'
+  const days = Object.values(m.marks).reduce((n, list) => n + list.length, 0)
+  const subjects = Object.entries(m.marks).filter(([, list]) => list.length).length
+  const parts: string[] = []
+  parts.push(
+    days
+      ? `${days} subject-day${days === 1 ? '' : 's'} across ${subjects} subject${subjects === 1 ? '' : 's'}`
+      : 'No days recorded',
+  )
+  if (m.reading_materials.trim()) parts.push('reading titles')
+  if (m.field_trips.trim()) parts.push('field trips')
+  if (m.accomplishments.trim()) parts.push('accomplishments')
+  return parts.join(' · ')
+}
+
+/** The child sheet's line: what is filled in, not what the form offers. */
+function childSummary(student: Student, year: MonthlyYear): string {
+  const parts: string[] = []
+  if (student.dob) parts.push('date of birth')
+  if (year.letter_of_intent_date) parts.push('Letter of Intent date')
+  if (student.diagnosis || student.strengths || student.needs || student.learns_best) {
+    parts.push('a brief profile of the child')
+  }
+  if (year.notes.trim()) parts.push('notes')
+  return parts.length ? parts.join(' · ') : 'Not filled in yet'
+}
+
 /**
  * The footer every sheet carries.
  *
@@ -452,8 +484,6 @@ function Cover({
  * loose page belonged to or when it was printed — so two versions of the same
  * portfolio were indistinguishable on paper.
  *
- * The date is the day it was printed, formatted the long way: 08/09/2026 is
- * two different days depending on who reads it.
  */
 function SheetFoot({
   student,
@@ -468,11 +498,6 @@ function SheetFoot({
   index: number
   total: number
 }) {
-  const printed = new Date().toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
   return (
     <p className="sheet-footnote sheet-foot">
       <span>
@@ -480,7 +505,7 @@ function SheetFoot({
         {year.county ? ` · ${year.county} County, Florida` : ' · Florida'}
       </span>
       <span>
-        {sheet} · sheet {index} of {total} · printed {printed}
+        {sheet} · sheet {index} of {total}
       </span>
     </p>
   )
@@ -495,21 +520,41 @@ function RecordPage({
   student: Student
   update: Update
 }) {
-  const tick = (key: string) => (
-    <input
-      type="checkbox"
-      checked={Boolean(year.checklist[key])}
-      onChange={(e) => update({ checklist: { ...year.checklist, [key]: e.target.checked } }, true)}
-    />
-  )
+  /**
+   * What is actually on each sheet, counted from the year rather than
+   * described in advance — a table of contents that can go stale is worse
+   * than none, and this one is rebuilt every time the folder is opened.
+   */
+  const contents = [
+    { key: 'cover', name: 'Cover', what: `${student.name}${year.label ? `, ${year.label}` : ''}` },
+    { key: 'record', name: 'Table of contents', what: 'This page' },
+    { key: 'child', name: 'Child’s information', what: childSummary(student, year) },
+    ...MONTHS.map((m) => ({ key: m.key, name: m.label, what: monthSummary(year, m.key) })),
+    {
+      key: 'curriculum',
+      name: 'Curriculums used',
+      what: countOf(year.curriculums.length, 'programme, book, site or app', 'programmes, books, sites and apps'),
+    },
+    {
+      key: 'samples',
+      name: 'Work samples',
+      what: countOf(year.samples.length, 'sample of the child’s work', 'samples of the child’s work'),
+    },
+    {
+      key: 'documents',
+      name: 'Additional documents',
+      what: year.documents.length
+        ? year.documents.map((d) => d.title || d.file_name).join(' · ')
+        : 'Nothing attached',
+    },
+  ].map((row) => ({ ...row, sheet: SHEETS.indexOf(row.key) + 1 }))
 
-  /** The prototype bolds one phrase per item; **…** marks it. */
-  const withEmphasis = (text: string) =>
-    text.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <strong key={i}>{part}</strong> : part))
+  const firstMonth = SHEETS.indexOf(MONTHS[0].key) + 1
+  const lastMonth = SHEETS.indexOf(MONTHS[MONTHS.length - 1].key) + 1
 
   return (
     <section className="sheet doc-sheet">
-      <div className="kicker">Portfolio record</div>
+      <div className="kicker">Contents</div>
       <h2 className="sheet-title">Home Education Portfolio</h2>
       <hr className="hr" style={{ margin: '18px 0 22px' }} />
 
@@ -530,7 +575,7 @@ function RecordPage({
         />
       </div>
 
-      <div style={{ display: 'flex', gap: 34, marginTop: 22 }}>
+      <div style={{ display: 'flex', gap: 34, marginTop: 14 }}>
         <Rule
           label="From"
           value={year.from_date}
@@ -547,45 +592,38 @@ function RecordPage({
         />
       </div>
 
-      <div style={{ marginTop: 22 }}>
+      <div style={{ marginTop: 14 }}>
         <Rule label="For student(s)" value={student.name} onChange={() => {}} size={15} />
       </div>
 
-      <h3 className="sheet-h3">A complete Florida portfolio must contain</h3>
-      <hr className="hr" style={{ margin: '4px 0 14px' }} />
-      <div className="check-list">
-        {CHECKLIST_REQUIRED.map((item) => (
-          <label key={item.key}>
-            {tick(item.key)}
-            <span>{withEmphasis(item.label)}</span>
-          </label>
-        ))}
-      </div>
-
-      <h3 className="sheet-h3">Recommended, not required</h3>
-      <hr className="hr" style={{ margin: '4px 0 12px' }} />
-      <p className="sheet-note">
-        Florida Department of Education policy <em>recommends</em> — but Florida law does not
-        require — that the portfolio also hold copies of:
+      <h3 className="sheet-h3">Table of contents</h3>
+      <hr className="hr" style={{ margin: '4px 0 10px' }} />
+      <p className="sheet-note" style={{ margin: '0 0 12px' }}>
+        Every sheet in this folder and what it holds. Counts are read from the record itself, so
+        this page cannot claim more than the folder contains.
       </p>
-      <div className="check-list">
-        {CHECKLIST_RECOMMENDED.map((item) => (
-          <label key={item.key}>
-            {tick(item.key)}
-            <span>{item.label}</span>
-          </label>
-        ))}
-      </div>
 
-      <p className="sheet-footnote">
-        The Letter of Intent is completed once, when the home education program begins; after
-        several years of homeschooling it may be an old document. School districts may not add
-        requirements beyond those set in state law.
+      <table className="toc">
+        <tbody>
+          {contents.map((row) => (
+            <tr key={row.key}>
+              <td className="toc-n num">{row.sheet}</td>
+              <td className="toc-name">{row.name}</td>
+              <td className="toc-what">{row.what}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <p className="sheet-footnote" style={{ marginTop: '14px' }}>
+        Florida asks for a log kept as the teaching happened, the titles of the materials used,
+        and samples of the work: sheets {firstMonth}–{lastMonth}, the same sheets and sheet{' '}
+        {SHEETS.indexOf('curriculum') + 1}, and sheet {SHEETS.indexOf('samples') + 1}.
       </p>
       <SheetFoot
         student={student}
         year={year}
-        sheet="Portfolio record"
+        sheet="Table of contents"
         index={SHEETS.indexOf('record') + 1}
         total={SHEETS.length}
       />
@@ -680,6 +718,8 @@ function ChildInfo({
         </div>
       </div>
 
+      <ChildProfile student={student} />
+
       <div className="no-print" style={{ marginTop: 34 }}>
         <div className="rule-label">Optional — your own notes about this child</div>
         <p className="sheet-note" style={{ margin: '6px 0 10px' }}>
@@ -704,6 +744,54 @@ function ChildInfo({
         total={SHEETS.length}
       />
     </section>
+  )
+}
+
+
+/**
+ * A short profile of the child, and what the year worked on.
+ *
+ * It is written once, in the Annual Record, and read here — the same child
+ * described twice in two places is a child described differently in two
+ * places, and an evaluator reading both would be right to ask which is true.
+ *
+ * Nothing prints when nothing has been written. An empty heading over an
+ * empty rule tells a reader the parent left it blank, which is not the same
+ * as telling them there is nothing to say.
+ */
+function ChildProfile({ student }: { student: Student }) {
+  const lines = [
+    { label: 'Learning profile', value: student.diagnosis },
+    { label: 'Strengths', value: student.strengths },
+    { label: 'Where she needs support', value: student.needs },
+    { label: 'How she learns best', value: student.learns_best },
+  ].filter((line) => line.value && line.value.trim())
+
+  if (!lines.length) {
+    return (
+      <p className="sheet-note no-print" style={{ marginTop: 30, maxWidth: '5.6in' }}>
+        A brief profile of this child — her strengths, where she needs support, and how she learns
+        best — appears here once it is written in the Annual Record, under Child profile. It is
+        kept in one place so the two portfolios cannot describe her differently.
+      </p>
+    )
+  }
+
+  return (
+    <div style={{ marginTop: 30 }}>
+      <h3 className="sheet-h3" style={{ marginTop: 0 }}>
+        A brief profile of this child
+      </h3>
+      <hr className="hr" style={{ margin: '4px 0 14px' }} />
+      <dl className="profile">
+        {lines.map((line) => (
+          <div key={line.label}>
+            <dt className="rule-label">{line.label}</dt>
+            <dd>{line.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   )
 }
 

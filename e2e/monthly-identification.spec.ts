@@ -9,7 +9,7 @@ import type { Page } from '@playwright/test'
  */
 const SHEETS = [
   'Cover',
-  'Portfolio record',
+  'Table of contents',
   'Child’s information',
   'August 2025',
   'January 2026',
@@ -27,14 +27,16 @@ async function open(page: Page, sheet: string) {
 
 test.describe('Every sheet says whose it is', () => {
   for (const sheet of SHEETS) {
-    test(`${sheet} carries the child, the folder and the print date`, async ({ app }) => {
+    test(`${sheet} carries the child, the folder and its own number`, async ({ app }) => {
       await open(app, sheet)
       const foot = app.locator('.sheet-foot')
       await expect(foot).toBeVisible()
       await expect(foot).toContainText('Sofía Ramírez')
       await expect(foot).toContainText('Home Education Portfolio')
       await expect(foot).toContainText(/sheet \d+ of 17/)
-      await expect(foot).toContainText(/printed \w+ \d+, \d{4}/)
+      // No print date: this folder records a school year, not the afternoon
+      // somebody pressed print, and two copies of it are the same document.
+      await expect(foot).not.toContainText(/printed/i)
     })
   }
 
@@ -56,19 +58,18 @@ test.describe('Every sheet says whose it is', () => {
 
 test.describe('Nothing on the paper is invented', () => {
   test('the county prints only once the parent has entered one', async ({ app }) => {
-    await open(app, 'Portfolio record')
+    await open(app, 'Table of contents')
     await app.getByLabel('County').fill('')
     await app.waitForTimeout(700)
 
     await expect(app.locator('.sheet-foot')).not.toContainText('County')
-    await app.locator('.section-link', { hasText: 'Cover' }).click()
-    await expect(app.locator('.cover-kicker')).toHaveText('Florida Statute 1002.41')
+    // The cover carries the child's name, not a statute reference and not a
+    // district nobody typed.
+    await expect(app.locator('.cover-kicker')).toHaveCount(0)
 
-    await app.locator('.section-link', { hasText: 'Portfolio record' }).click()
     await app.getByLabel('County').fill('Broward')
     await app.waitForTimeout(700)
-    await app.locator('.section-link', { hasText: 'Cover' }).click()
-    await expect(app.locator('.cover-kicker')).toContainText('Broward County')
+    await expect(app.locator('.sheet-foot')).toContainText('Broward County, Florida')
   })
 
   test('the school year is the parent’s to name, and renaming it keeps the year', async ({
@@ -78,7 +79,7 @@ test.describe('Nothing on the paper is invented', () => {
     await app.getByLabel('Language Arts on January 2026 14').check()
     await app.waitForTimeout(700)
 
-    await app.locator('.section-link', { hasText: 'Portfolio record' }).click()
+    await app.locator('.section-link', { hasText: 'Table of contents' }).click()
     await app.getByLabel('School year').fill('Kindergarten 2025–26')
     await app.waitForTimeout(700)
     await app.reload()
