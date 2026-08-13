@@ -110,7 +110,7 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
     return () => {
       cancelled = true
     }
-  }, [printing])
+  }, [printing, reload])
 
   const pages: { key: PageKey; label: string }[] = [
     { key: 'cover', label: 'Cover' },
