@@ -44,8 +44,6 @@ test.describe('The child’s private details', () => {
   test('are editable on screen', async ({ app }) => {
     await openChildInfo(app)
 
-    await app.getByLabel('Address').fill('7845 Example Circle')
-    await app.getByLabel('City').fill('Tamarac')
     await app.getByLabel('Notes anyone reading this record should know').fill(
       'Works with a speech therapist twice a week.',
     )
@@ -53,17 +51,22 @@ test.describe('The child’s private details', () => {
     await app.reload()
     await app.locator('.section-link', { hasText: 'Child’s information' }).click()
 
-    await expect(app.getByLabel('Address')).toHaveValue('7845 Example Circle')
     await expect(app.getByLabel('Notes anyone reading this record should know')).toHaveValue(
       'Works with a speech therapist twice a week.',
     )
   })
 
+  test('the home address is not asked for anywhere', async ({ app }) => {
+    await openChildInfo(app)
+    // Not hidden on paper — never collected. The district has it from the
+    // Letter of Intent, and a folder that never holds it cannot leak it.
+    for (const label of ['Address', 'City', 'ZIP']) {
+      await expect(app.getByLabel(label)).toHaveCount(0)
+    }
+  })
+
   test('never reach the printed sheet', async ({ app }) => {
     await openChildInfo(app)
-    await app.getByLabel('Address').fill('7845 Example Circle')
-    await app.getByLabel('City').fill('Tamarac')
-    await app.getByLabel('ZIP').fill('33321')
     await app.getByLabel('Notes anyone reading this record should know').fill(
       'Diagnosed with an intellectual disability and autism.',
     )
@@ -71,17 +74,14 @@ test.describe('The child’s private details', () => {
 
     await app.emulateMedia({ media: 'print' })
 
-    for (const label of ['Address', 'City', 'ZIP', 'Date of birth']) {
-      await expect(app.getByLabel(label)).toBeHidden()
-    }
-    await expect(
-      app.getByLabel('Notes anyone reading this record should know'),
-    ).toBeHidden()
-
-    // And nothing of it survives anywhere on the sheet — text or field value.
-    const printed = await whatPrints(app)
-    for (const secret of ['7845', 'Tamarac', '33321', 'autism', 'intellectual disability']) {
-      expect(printed.toLowerCase()).not.toContain(secret.toLowerCase())
+    await expect(app.getByLabel('Date of birth')).toBeHidden()
+    await expect(app.getByLabel('Notes anyone reading this record should know')).toBeHidden()
+    // Every node holding it, hidden — the textarea and its printed twin.
+    // getByText matches hidden nodes, so counting them would pass whether or
+    // not the ink reaches paper.
+    const holders = app.getByText('intellectual disability')
+    for (let i = 0; i < (await holders.count()); i++) {
+      await expect(holders.nth(i)).toBeHidden()
     }
   })
 

@@ -36,13 +36,13 @@ test.describe('One link, two portfolios', () => {
     // The child's name comes from the shared student record.
     await expect(app.getByLabel('Child’s full name')).toHaveValue('Sofía Ramírez')
 
-    await app.getByLabel('Address').fill('123 Palm Avenue')
+    await app.getByLabel('Notes anyone reading this record should know').fill('Speech therapy')
     await app.waitForTimeout(600)
 
     // Nothing of this leaks into the evaluation portfolio.
     await app.goto('/evaluation')
     await expect(app.getByLabel('Student name')).toHaveValue('Sofía Ramírez')
-    await expect(app.getByText('123 Palm Avenue')).toHaveCount(0)
+    await expect(app.getByText('Speech therapy')).toHaveCount(0)
   })
 })
 

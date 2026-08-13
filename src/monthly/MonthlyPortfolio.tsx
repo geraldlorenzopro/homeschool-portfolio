@@ -402,7 +402,6 @@ function Cover({
             </label>
           </div>
 
-          <div className="cover-hint">Drag or click to upload the photograph</div>
 
           <div className="cover-fields">
             <Rule
@@ -421,10 +420,6 @@ function Cover({
             />
           </div>
 
-          <p className="no-print cover-note">
-            One portfolio may be used for more than one child in the same family. Add each
-            child’s name above and note whose work each sample belongs to.
-          </p>
 
         </div>
       </div>
@@ -549,8 +544,6 @@ function RecordPage({
     },
   ].map((row) => ({ ...row, sheet: SHEETS.indexOf(row.key) + 1 }))
 
-  const firstMonth = SHEETS.indexOf(MONTHS[0].key) + 1
-  const lastMonth = SHEETS.indexOf(MONTHS[MONTHS.length - 1].key) + 1
 
   return (
     <section className="sheet doc-sheet">
@@ -598,10 +591,6 @@ function RecordPage({
 
       <h3 className="sheet-h3">Table of contents</h3>
       <hr className="hr" style={{ margin: '4px 0 10px' }} />
-      <p className="sheet-note" style={{ margin: '0 0 12px' }}>
-        Every sheet in this folder and what it holds. Counts are read from the record itself, so
-        this page cannot claim more than the folder contains.
-      </p>
 
       <table className="toc">
         <tbody>
@@ -615,11 +604,6 @@ function RecordPage({
         </tbody>
       </table>
 
-      <p className="sheet-footnote" style={{ marginTop: '14px' }}>
-        Florida asks for a log kept as the teaching happened, the titles of the materials used,
-        and samples of the work: sheets {firstMonth}–{lastMonth}, the same sheets and sheet{' '}
-        {SHEETS.indexOf('curriculum') + 1}, and sheet {SHEETS.indexOf('samples') + 1}.
-      </p>
       <SheetFoot
         student={student}
         year={year}
@@ -644,11 +628,6 @@ function ChildInfo({
     <section className="sheet doc-sheet">
       <div className="kicker">Student record</div>
       <h2 className="sheet-title">Child’s Information</h2>
-      <p className="sheet-note no-print" style={{ margin: '10px 0 0', maxWidth: '5.6in' }}>
-        The home address, the date of birth and your notes are greyed on paper — they stay in this
-        app. s. 1002.41 does not ask for them, and the district already has them from the Letter of
-        Intent. What prints is the child’s name, yours, and the date of that letter.
-      </p>
       <hr className="hr" style={{ margin: '18px 0 26px' }} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
@@ -675,58 +654,18 @@ function ChildInfo({
           </div>
         </div>
 
-        <p className="no-print sheet-note" style={{ maxWidth: '5.6in', marginTop: -8 }}>
-          The month and day of the Letter of Intent is the annual evaluation deadline every year —
-          unless the child stops homeschooling first, in which case the deadline becomes 30 days
-          after the Notice of Termination. When moving to another Florida county, use the Transfer
-          Request instead.
-        </p>
 
         <Rule
           label="Parent’s name"
           value={year.parent_name}
           onChange={(v) => update({ parent_name: v })}
         />
-        <div className="no-print">
-          <Rule
-            label="Address"
-            value={year.address}
-            onChange={(v) => update({ address: v })}
-            placeholder="Street address"
-          />
-        </div>
-
-        <div className="no-print" style={{ display: 'flex', gap: 20, alignItems: 'flex-end' }}>
-          <div style={{ flex: 2 }}>
-            <Rule
-              label="City"
-              value={year.city}
-              onChange={(v) => update({ city: v })}
-              placeholder="City"
-            />
-          </div>
-          <span style={{ fontSize: 16, paddingBottom: 6 }}>, FL</span>
-          <div style={{ flex: 1 }}>
-            <Rule
-              label="ZIP"
-              value={year.zip}
-              onChange={(v) => update({ zip: v })}
-              placeholder="ZIP"
-              tabular
-            />
-          </div>
-        </div>
       </div>
 
       <ChildProfile student={student} />
 
       <div className="no-print" style={{ marginTop: 34 }}>
         <div className="rule-label">Optional — your own notes about this child</div>
-        <p className="sheet-note" style={{ margin: '6px 0 10px' }}>
-          These stay with you. Anything about a diagnosis, a therapy or how this child learns is
-          yours to share with an evaluator when you judge it helps her — the statute does not ask
-          for it, and it does not print with the portfolio.
-        </p>
         <textarea
           className="lined"
           aria-label="Notes anyone reading this record should know"
@@ -755,9 +694,9 @@ function ChildInfo({
  * described twice in two places is a child described differently in two
  * places, and an evaluator reading both would be right to ask which is true.
  *
- * Nothing prints when nothing has been written. An empty heading over an
- * empty rule tells a reader the parent left it blank, which is not the same
- * as telling them there is nothing to say.
+ * Nothing appears at all when nothing has been written: an empty heading
+ * over an empty rule tells a reader the parent left it blank, which is not
+ * the same as there being nothing to say.
  */
 function ChildProfile({ student }: { student: Student }) {
   const lines = [
@@ -767,15 +706,7 @@ function ChildProfile({ student }: { student: Student }) {
     { label: 'How she learns best', value: student.learns_best },
   ].filter((line) => line.value && line.value.trim())
 
-  if (!lines.length) {
-    return (
-      <p className="sheet-note no-print" style={{ marginTop: 30, maxWidth: '5.6in' }}>
-        A brief profile of this child — her strengths, where she needs support, and how she learns
-        best — appears here once it is written in the Annual Record, under Child profile. It is
-        kept in one place so the two portfolios cannot describe her differently.
-      </p>
-    )
-  }
+  if (!lines.length) return null
 
   return (
     <div style={{ marginTop: 30 }}>
@@ -838,10 +769,6 @@ function MonthLog({
         </div>
       </div>
 
-      <p className="no-print sheet-note" style={{ margin: '14px 0 8px', fontSize: 10.5 }}>
-        Check the box under the day of the month on which the subject was covered. Days this month
-        does not have are struck through.
-      </p>
 
       <div className="log-grid">
         <div className="log-row log-head">
@@ -976,10 +903,6 @@ function CurriculumPage({
       <h2 className="sheet-title" style={{ fontSize: 34, margin: '6px 0 0' }}>
         Curriculums used
       </h2>
-      <p className="no-print sheet-note" style={{ margin: '10px 0 16px', fontSize: 11 }}>
-        Every programme, book, site or app used this school year. Florida asks for the titles of
-        the materials — this page is that list.
-      </p>
 
       {year.curriculums.length === 0 ? (
         <p className="empty-state">Nothing listed yet.</p>
@@ -1101,10 +1024,6 @@ function SamplesPage({
       <h2 className="sheet-title" style={{ fontSize: 34, margin: '6px 0 0' }}>
         Work samples
       </h2>
-      <p className="no-print sheet-note" style={{ margin: '10px 0 16px', fontSize: 11 }}>
-        Photographs of pages, worksheets, drawings, scanned PDFs. Choose as many files as you
-        like — each one is filed on its own and you can name it afterwards.
-      </p>
 
       <label
         className="drop-zone no-print"
@@ -1264,10 +1183,6 @@ function DocumentsPage({
       <h2 className="sheet-title" style={{ fontSize: 34, margin: '6px 0 0' }}>
         Additional documents
       </h2>
-      <p className="no-print sheet-note" style={{ margin: '10px 0 16px', fontSize: 11 }}>
-        The Letter of Intent, the annual evaluation, immunization records, certificates — anything
-        else this portfolio has to carry. Each one prints in full at the back.
-      </p>
 
       <label
         className="drop-zone no-print"

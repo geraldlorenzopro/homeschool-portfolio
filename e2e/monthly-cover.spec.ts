@@ -50,14 +50,13 @@ test.describe('The cover', () => {
     expect(adjust).toBe('exact')
   })
 
-  test('drops the instructions to the parent from the printed page', async ({ app }) => {
+  test('carries no instructions to the parent at all', async ({ app }) => {
     await openCover(app)
-    await expect(app.getByText('Drag or click to upload the photograph')).toBeVisible()
-
-    await app.emulateMedia({ media: 'print' })
-    await expect(app.getByText('Drag or click to upload the photograph')).toBeHidden()
-    // Exact: the hint's own text contains this one as a substring.
-    await expect(app.getByText('Click to upload the photograph', { exact: true })).toBeHidden()
+    // The folder is handed to a district. Nothing on it explains how to use
+    // the app that made it.
+    await expect(app.getByText('Drag or click to upload')).toHaveCount(0)
+    await expect(app.getByText('One portfolio may be used')).toHaveCount(0)
+    await expect(app.locator('.cover-kicker')).toHaveCount(0)
   })
 
   test('the photograph still uploads and shows on the cover', async ({ app }) => {
