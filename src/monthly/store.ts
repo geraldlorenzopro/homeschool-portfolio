@@ -37,6 +37,11 @@ export function useMonthlyYear(studentId: string) {
     queryFn: () => repo.load(studentId),
     enabled: Boolean(studentId),
     staleTime: 30_000,
+    // Every photograph and scan is served through a signed URL that dies after
+    // an hour. A portfolio left open on a desk all afternoon would quietly
+    // turn into a page of broken images, so the year is re-read — and the URLs
+    // re-minted — well before that.
+    refetchInterval: 45 * 60_000,
   })
 
   const year = data ?? blankYear()
@@ -264,8 +269,15 @@ export function useMonthlyYear(studentId: string) {
     onError: (e: Error) => toast(e.message),
   })
 
+  /** Re-reads the year, which mints fresh signed URLs for every file. */
+  const reload = useCallback(
+    () => queryClient.refetchQueries({ queryKey: monthlyKey(studentId) }),
+    [queryClient, studentId],
+  )
+
   return {
     year,
+    reload,
     isLoading,
     error: error as Error | null,
     updateYear,

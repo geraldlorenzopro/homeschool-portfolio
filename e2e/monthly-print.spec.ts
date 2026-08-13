@@ -105,3 +105,27 @@ test.describe('Printing', () => {
     expect(fit).toBe('contain')
   })
 })
+
+test.describe('Printing refuses to lose evidence', () => {
+  test('a photograph that will not load stops the print and says so', async ({ app }) => {
+    await openMonthly(app)
+    await app.locator('.section-link', { hasText: 'Work samples' }).click()
+    await app.getByLabel('Work sample files').setInputFiles([
+      { name: 'drawing.png', mimeType: 'image/png', buffer: PNG_1PX },
+    ])
+    await expect(app.locator('.sample-card')).toHaveCount(1)
+
+    // What an expired signed URL looks like to the browser: complete, and
+    // zero pixels wide. `img.complete` alone would call this ready.
+    await app.evaluate(() => {
+      const img = document.querySelector('.sample-card img') as HTMLImageElement
+      img.src = 'data:image/png;base64,not-a-png'
+    })
+
+    await watchPrint(app)
+    await app.getByRole('button', { name: /Print the whole folder/ }).click()
+
+    await expect(app.getByRole('alert')).toContainText('could not be loaded', { timeout: 60_000 })
+    expect((await printState(app)).calls).toBe(0)
+  })
+})

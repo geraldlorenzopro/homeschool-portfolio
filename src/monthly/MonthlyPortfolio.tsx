@@ -45,6 +45,7 @@ const SHEETS: PageKey[] = [
 export function MonthlyPortfolio({ student }: { student: Student }) {
   const {
     year,
+    reload,
     isLoading,
     error,
     updateYear,
@@ -72,12 +73,29 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
   // photograph has finished drawing. They arrive after the elements that hold
   // them, and printing early yields blank pages — the one failure mode of
   // this feature that the parent would only discover on paper.
+  const [missing, setMissing] = useState(0)
+
   useEffect(() => {
     if (!printing) return
     let cancelled = false
     void (async () => {
-      await waitForPrintReady()
+      // Fresh signed URLs first. They last an hour, so a folder that has been
+      // open since the morning is holding links that no longer resolve, and
+      // printing it would hand the district a stack of empty frames.
+      await reload()
       if (cancelled) return
+
+      const state = await waitForPrintReady()
+      if (cancelled) return
+
+      // A portfolio that prints with its evidence missing is worse than one
+      // that refuses to print, so this stops and says which is wrong.
+      if (state.broken > 0) {
+        setMissing(state.broken)
+        setPrinting(null)
+        return
+      }
+      setMissing(0)
 
       // The folder has to stay mounted until the browser is finished with it.
       // window.print() blocks in Chrome but returns immediately in Safari, and
@@ -266,6 +284,13 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
                 ? 'Drawing every page of the folder…'
                 : 'Drawing this sheet…'}
             </span>
+          )}
+          {missing > 0 && (
+            <p className="print-problem" role="alert">
+              {missing === 1 ? 'One file' : `${missing} files`} could not be loaded, so nothing was
+              printed — a portfolio with its evidence missing is worse than none. Reload the page
+              and try again.
+            </p>
           )}
         </div>
       </aside>
