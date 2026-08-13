@@ -418,26 +418,35 @@ function ChildInfo({
     <section className="sheet doc-sheet">
       <div className="kicker">Student record</div>
       <h2 className="sheet-title">Child’s Information</h2>
+      <p className="sheet-note no-print" style={{ margin: '10px 0 0', maxWidth: '5.6in' }}>
+        The home address, the date of birth and your notes are greyed on paper — they stay in this
+        app. s. 1002.41 does not ask for them, and the district already has them from the Letter of
+        Intent. What prints is the child’s name, yours, and the date of that letter.
+      </p>
       <hr className="hr" style={{ margin: '18px 0 26px' }} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
         <Rule label="Child’s full name" value={student.name} onChange={() => {}} />
 
         <div style={{ display: 'flex', gap: 34 }}>
-          <Rule
-            label="Date of birth"
-            value={student.dob}
-            onChange={() => {}}
-            placeholder="MM / DD / YYYY"
-            tabular
-          />
-          <Rule
-            label="Date of the Letter of Intent"
-            value={year.letter_of_intent_date}
-            onChange={(v) => update({ letter_of_intent_date: v })}
-            placeholder="MM / DD / YYYY"
-            tabular
-          />
+          <div className="no-print" style={{ flex: 1 }}>
+            <Rule
+              label="Date of birth"
+              value={student.dob}
+              onChange={() => {}}
+              placeholder="MM / DD / YYYY"
+              tabular
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <Rule
+              label="Date of the Letter of Intent"
+              value={year.letter_of_intent_date}
+              onChange={(v) => update({ letter_of_intent_date: v })}
+              placeholder="MM / DD / YYYY"
+              tabular
+            />
+          </div>
         </div>
 
         <p className="sheet-note" style={{ maxWidth: '5.6in', marginTop: -8 }}>
@@ -452,14 +461,16 @@ function ChildInfo({
           value={year.parent_name}
           onChange={(v) => update({ parent_name: v })}
         />
-        <Rule
-          label="Address"
-          value={year.address}
-          onChange={(v) => update({ address: v })}
-          placeholder="Street address"
-        />
+        <div className="no-print">
+          <Rule
+            label="Address"
+            value={year.address}
+            onChange={(v) => update({ address: v })}
+            placeholder="Street address"
+          />
+        </div>
 
-        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-end' }}>
+        <div className="no-print" style={{ display: 'flex', gap: 20, alignItems: 'flex-end' }}>
           <div style={{ flex: 2 }}>
             <Rule
               label="City"
@@ -481,12 +492,12 @@ function ChildInfo({
         </div>
       </div>
 
-      <div style={{ marginTop: 34 }}>
-        <div className="rule-label">
-          Optional — notes anyone reading this record should know
-        </div>
+      <div className="no-print" style={{ marginTop: 34 }}>
+        <div className="rule-label">Optional — your own notes about this child</div>
         <p className="sheet-note" style={{ margin: '6px 0 10px' }}>
-          For example, special needs that may affect this child’s learning.
+          These stay with you. Anything about a diagnosis, a therapy or how this child learns is
+          yours to share with an evaluator when you judge it helps her — the statute does not ask
+          for it, and it does not print with the portfolio.
         </p>
         <textarea
           className="lined"
