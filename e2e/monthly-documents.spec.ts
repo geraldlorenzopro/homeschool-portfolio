@@ -138,3 +138,23 @@ test.describe('Additional documents', () => {
     ).toHaveText('0')
   })
 })
+
+test.describe('A document is shown whole', () => {
+  test('a photographed letter fills the column instead of a fixed box', async ({ app }) => {
+    await openDocuments(app)
+    await app.getByLabel('Additional document files').setInputFiles([png('letter of intent.png')])
+
+    const image = app.locator('.document-block .document-image')
+    await expect(image).toBeVisible()
+
+    // Its own aspect ratio, at the width of the sheet — not squeezed into a
+    // 260px window where a full page of handwriting reads as a smudge.
+    const box = await image.boundingBox()
+    const natural = await image.evaluate((el: HTMLImageElement) => ({
+      w: el.naturalWidth,
+      h: el.naturalHeight,
+    }))
+    expect(box!.width).toBeGreaterThan(400)
+    expect(box!.height / box!.width).toBeCloseTo(natural.h / natural.w, 1)
+  })
+})

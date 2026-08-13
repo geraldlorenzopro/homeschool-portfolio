@@ -1089,3 +1089,14 @@ textarea.lined {
   border-left: 2px solid var(--color-accent);
   padding: 8px 10px;
 }
+
+/* A scanned or photographed document, shown whole. */
+.document-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--color-divider);
+  break-inside: avoid;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}

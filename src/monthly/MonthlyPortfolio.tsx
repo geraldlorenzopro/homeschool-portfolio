@@ -3,7 +3,7 @@ import { loadEverything, printState, waitForPrintReady } from '@/lib/printReady'
 import { PdfPages } from '@/components/PdfPages'
 import { CoverBorder } from './CoverBorder'
 import { FilePlate, RemoveButton, ViewButton } from '@/components/ui'
-import { isPdf } from '@/lib/image'
+import { isImage, isPdf } from '@/lib/image'
 import { fmtDate } from '@/lib/format'
 import type { Student } from '@/lib/types'
 import {
@@ -1293,6 +1293,16 @@ function DocumentsPage({
 
               {isPdf(doc.mime) && doc.url ? (
                 <PdfPages url={doc.url} label={doc.title || doc.file_name} />
+              ) : isImage(doc.mime) && doc.url ? (
+                // A photographed Letter of Intent is a document, not a
+                // thumbnail: it goes the full width of the column at its own
+                // height. In a fixed box it was legible to nobody.
+                <img
+                  className="document-image"
+                  src={doc.url}
+                  alt={doc.title || doc.file_name}
+                  loading="lazy"
+                />
               ) : (
                 <FilePlate
                   url={doc.url}
