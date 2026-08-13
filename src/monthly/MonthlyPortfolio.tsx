@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
+import { waitForPrintReady } from '@/lib/printReady'
 import { PdfPages } from '@/components/PdfPages'
 import { CoverBorder } from './CoverBorder'
 import { FilePlate, RemoveButton, ViewButton } from '@/components/ui'
@@ -64,6 +65,34 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
     dirty,
   } = useMonthlyYear(student.id)
   const [page, setPage] = useState<PageKey>('cover')
+  /** null when nobody is printing; otherwise what is about to be printed. */
+  const [printing, setPrinting] = useState<null | 'sheet' | 'folder'>(null)
+
+  // Nothing may reach the print dialog until every canvas and every
+  // photograph has finished drawing. They arrive after the elements that hold
+  // them, and printing early yields blank pages — the one failure mode of
+  // this feature that the parent would only discover on paper.
+  useEffect(() => {
+    if (!printing) return
+    let cancelled = false
+    void (async () => {
+      await waitForPrintReady()
+      if (cancelled) return
+
+      // The folder has to stay mounted until the browser is finished with it.
+      // window.print() blocks in Chrome but returns immediately in Safari, and
+      // tearing the pages down mid-dialog would print whatever is left.
+      const done = () => {
+        window.removeEventListener('afterprint', done)
+        setPrinting(null)
+      }
+      window.addEventListener('afterprint', done)
+      window.print()
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [printing])
 
   const pages: { key: PageKey; label: string }[] = [
     { key: 'cover', label: 'Cover' },
@@ -75,13 +104,72 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
     { key: 'documents', label: 'Additional documents' },
   ]
 
-  const month = MONTHS.find((m) => m.key === page)
-
   if (error) {
     return <p className="empty-state" style={{ padding: 40 }}>{error.message}</p>
   }
   if (isLoading) {
     return <p className="empty-state" style={{ padding: 40 }}>Opening the year…</p>
+  }
+
+  const sheet = (key: PageKey) => {
+    const m = MONTHS.find((x) => x.key === key)
+    if (m) {
+      return (
+        <MonthLog
+          year={year}
+          student={student}
+          month={m}
+          setSubject={setSubject}
+          setMonth={setMonth}
+          toggleDay={toggleDay}
+        />
+      )
+    }
+    switch (key) {
+      case 'cover':
+        return (
+          <Cover year={year} student={student} update={updateYear} setCoverPhoto={setCoverPhoto} />
+        )
+      case 'record':
+        return <RecordPage year={year} student={student} update={updateYear} />
+      case 'child':
+        return <ChildInfo year={year} student={student} update={updateYear} />
+      case 'curriculum':
+        return (
+          <CurriculumPage
+            year={year}
+            student={student}
+            add={addCurriculum}
+            set={setCurriculum}
+            remove={removeCurriculum}
+          />
+        )
+      case 'samples':
+        return (
+          <SamplesPage
+            year={year}
+            student={student}
+            add={addSamples}
+            set={setSample}
+            remove={removeSample}
+            busy={dirty}
+            printing={printing !== null}
+          />
+        )
+      case 'documents':
+        return (
+          <DocumentsPage
+            year={year}
+            student={student}
+            add={addDocuments}
+            set={setDocument}
+            remove={removeDocument}
+            busy={dirty}
+          />
+        )
+      default:
+        return null
+    }
   }
 
   return (
@@ -156,59 +244,36 @@ export function MonthlyPortfolio({ student }: { student: Student }) {
           </span>
           <button
             type="button"
+            className="btn"
+            style={{ justifyContent: 'flex-start', fontSize: 12 }}
+            disabled={printing !== null}
+            onClick={() => setPrinting('sheet')}
+          >
+            Print this sheet
+          </button>
+          <button
+            type="button"
             className="btn btn-primary"
             style={{ justifyContent: 'flex-start', fontSize: 12 }}
-            onClick={() => window.print()}
+            disabled={printing !== null}
+            onClick={() => setPrinting('folder')}
           >
-            Print / Save as PDF
+            Print the whole folder — {SHEETS.length} sheets
           </button>
+          {printing && (
+            <span className="save-state" data-dirty="true" role="status">
+              {printing === 'folder'
+                ? 'Drawing every page of the folder…'
+                : 'Drawing this sheet…'}
+            </span>
+          )}
         </div>
       </aside>
 
       <main className="panel-main" style={{ maxWidth: 'none' }}>
-        {page === 'cover' && <Cover year={year} student={student} update={updateYear} setCoverPhoto={setCoverPhoto} />}
-        {page === 'record' && <RecordPage year={year} student={student} update={updateYear} />}
-        {page === 'child' && <ChildInfo year={year} student={student} update={updateYear} />}
-        {page === 'curriculum' && (
-          <CurriculumPage
-            year={year}
-            student={student}
-            add={addCurriculum}
-            set={setCurriculum}
-            remove={removeCurriculum}
-          />
-        )}
-        {page === 'samples' && (
-          <SamplesPage
-            year={year}
-            student={student}
-            add={addSamples}
-            set={setSample}
-            remove={removeSample}
-            busy={dirty}
-          />
-        )}
-        {page === 'documents' && (
-          <DocumentsPage
-            year={year}
-            student={student}
-            add={addDocuments}
-            set={setDocument}
-            remove={removeDocument}
-            busy={dirty}
-          />
-        )}
-        {month && (
-          <MonthLog
-            key={month.key}
-            year={year}
-            student={student}
-            month={month}
-            setSubject={setSubject}
-            setMonth={setMonth}
-            toggleDay={toggleDay}
-          />
-        )}
+        {(printing === 'folder' ? SHEETS : [page]).map((key) => (
+          <Fragment key={key}>{sheet(key)}</Fragment>
+        ))}
       </main>
     </div>
   )
@@ -896,6 +961,7 @@ function SamplesPage({
   set,
   remove,
   busy,
+  printing,
 }: {
   year: MonthlyYear
   student: Student
@@ -903,6 +969,7 @@ function SamplesPage({
   set: (id: string, patch: Partial<MonthlySample>) => void
   remove: (id: string) => void
   busy: boolean
+  printing: boolean
 }) {
   const [over, setOver] = useState(false)
 
@@ -966,8 +1033,16 @@ function SamplesPage({
                 mime={sample.mime}
                 title={sample.title || sample.file_name}
                 height="150px"
+                fit="contain"
                 placeholder="the child’s work"
               />
+              {/* On paper a scanned page goes in whole. The card's thumbnail
+                  is a way to find it on screen, not evidence of the work. */}
+              {printing && isPdf(sample.mime) && sample.url && (
+                <div className="print-only sample-full">
+                  <PdfPages url={sample.url} label={sample.title || sample.file_name} />
+                </div>
+              )}
               <input
                 className="cell-input"
                 value={sample.title}

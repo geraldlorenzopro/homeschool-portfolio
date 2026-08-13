@@ -6,11 +6,15 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
-/** Beyond this a scanned IEP would swamp the portfolio it is attached to. */
-const MAX_PAGES = 12
+/**
+ * A cap high enough that no real attachment reaches it. The old limit was 12,
+ * printed under a line that said "the complete file is attached" — which the
+ * paper could not honour, because paper is all the evaluator gets.
+ */
+const MAX_PAGES = 200
 
-/** Rendered wide enough to stay sharp on paper at roughly 150 dpi. */
-const RENDER_WIDTH = 1100
+/** 2100 px across a 7in column is about 300 dpi — signatures stay readable. */
+const RENDER_WIDTH = 2100
 
 /** Draws `count` pages of a PDF into `host`. Returns the document's page total. */
 async function drawPages(
@@ -81,8 +85,10 @@ export function PdfPages({ url, label }: { url: string; label: string }) {
   }, [url])
 
   return (
-    <div>
-      {state === 'loading' && <p className="pdf-note">Rendering {label}…</p>}
+    // The flag every print path waits on. A canvas exists long before it is
+    // painted, so "the element is there" is not the same as "the ink is down".
+    <div data-print-ready={state === 'loading' ? 'false' : 'true'}>
+      {state === 'loading' && <p className="pdf-note no-print">Rendering {label}…</p>}
       {state === 'failed' && (
         <p className="pdf-note">
           {label} could not be rendered here. The file itself is still attached to this
@@ -91,10 +97,15 @@ export function PdfPages({ url, label }: { url: string; label: string }) {
       )}
       {state === 'ready' && total > pages && (
         <p className="pdf-note">
-          Showing the first {pages} of {total} pages. The complete file is attached.
+          This copy carries the first {pages} of {total} pages of {label}.
         </p>
       )}
-      <div className="pdf-pages" ref={host} />
+      <div
+        className="pdf-pages"
+        ref={host}
+        data-label={label}
+        data-total={state === 'ready' ? total : undefined}
+      />
     </div>
   )
 }
@@ -125,6 +136,7 @@ export function PdfThumb({ url, height }: { url: string; height: string }) {
   return (
     <div
       className="pdf-thumb"
+      data-print-ready={state === 'loading' ? 'false' : 'true'}
       data-state={state}
       style={{ height }}
       ref={host}

@@ -774,6 +774,7 @@ textarea.lined {
   gap: 18px;
   margin-top: 16px;
 }
+
 .sample-card {
   display: flex;
   flex-direction: column;
@@ -880,16 +881,22 @@ textarea.lined {
      and the browser adds nothing around it. Without this the paper box has
      Chrome's default half-inch margin, the cover grows past what is left, and
      a page designed to be one page prints as two. */
+  /* Real paper margins, on every page. They used to live in the sheet's own
+     padding, which works for a sheet that fits on one page and fails the
+     moment anything overflows: page two of the work samples began at 0.00in
+     from the edge of the paper. */
   @page {
     size: letter;
-    margin: 0;
+    margin: 0.5in;
   }
   .sheet {
     border: 0;
     box-shadow: none;
     border-radius: 0;
-    width: 8.5in;
-    min-height: 11in;
+    /* The page box already carries the margin, so the sheet fills it. */
+    width: 7.5in;
+    min-height: 10in;
+    padding: 0;
     break-after: page;
   }
   .sheet:last-child { break-after: auto; }
@@ -907,7 +914,10 @@ textarea.lined {
   /* Pinned, not merely a minimum: the cover came out one pixel over 11in and
      a single pixel is a whole second sheet of paper. Nothing is lost — the
      cover is a fixed design, and the overflow is that pixel. */
-  .cover-sheet { height: 11in; overflow: hidden; }
+  .cover-sheet { height: 10in; overflow: hidden; padding: 0; }
+  /* The printable page is an inch narrower than the sheet was on screen, so
+     the corner clusters have to come in with it or they sit on the title. */
+  .cover-corner { width: 1.55in; height: 1.55in; }
   .cover-hint,
   .cover-photo span { display: none; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1036,4 +1046,36 @@ textarea.lined {
 .cover-sheet .sheet-foot { padding-top: 0; }
 @media print {
   .sheet-foot { break-inside: avoid; }
+}
+
+/* On paper the samples ARE the evidence, so they get room: two to a row at
+   3.1in each, and never cropped — object-fit: cover quietly ate half of a
+   portrait photograph of a child's page.
+
+   These live at the end of the file on purpose. Sitting above the base
+   .sample-card rule, `display: block` lost to the later `display: flex`,
+   which is not a specificity contest anyone wins by being in @media print. */
+@media print {
+  .sample-grid { display: block; }
+  .sample-card {
+    display: block;
+    width: 3.1in;
+    float: left;
+    margin: 0 0.2in 0.3in 0;
+  }
+  .sample-card .plate,
+  .sample-card .pdf-thumb {
+    height: 3.1in !important;
+    object-fit: contain;
+  }
+  /* A scanned page goes in whole, on its own sheet, after the cards. */
+  .sample-full {
+    float: none;
+    clear: both;
+    break-before: page;
+  }
+  .sample-full .pdf-pages canvas {
+    width: 100%;
+    border: 1px solid var(--color-divider);
+  }
 }
